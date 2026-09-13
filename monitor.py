@@ -240,6 +240,17 @@ def enviar_email(assunto, corpo):
         return False
 
 
+def loop_autoping():
+    time.sleep(60)
+    while True:
+        try:
+            urllib.request.urlopen("https://monitor-fcc.onrender.com/login", timeout=10)
+            print("[AUTOPING] OK")
+        except:
+            pass
+        time.sleep(840)  # ping a cada 14 minutos
+
+
 def loop_monitoramento():
     print(f"[MONITOR] Iniciando monitoramento de: {estado['url']}")
     while estado["monitorando"]:
@@ -955,4 +966,5 @@ if __name__ == "__main__":
     print(f"Pressione Ctrl+C para parar\n")
 
     server = HTTPServer(("0.0.0.0", PORTA_SERVIDOR), Handler)
+    threading.Thread(target=loop_autoping, daemon=True).start()
     server.serve_forever()
