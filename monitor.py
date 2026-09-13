@@ -188,11 +188,9 @@ def loop_ranking():
                 est["total_mudancas"] += 1
                 msg = " | ".join(mudancas)
                 est["historico"].insert(0, {"hora": agora, "tipo": "mudanca", "msg": msg})
-                enviar_telegram(
-                    f"📊 Ranking Atualizado!\n{PLANILHA_NOME}\n" +
-                    "\n".join(mudancas) +
-                    f"\nDetectado em: {agora}"
-                )
+                texto = f"📊 Ranking Atualizado!\n{PLANILHA_NOME}\n" + "\n".join(mudancas) + f"\nDetectado em: {agora}"
+                enviar_telegram(texto)
+                enviar_email("📊 Ranking FCC Atualizado!", f"<h2>Ranking Atualizado!</h2><pre>{texto}</pre>")
             else:
                 est["historico"].insert(0, {"hora": agora, "tipo": "ok", "msg": "Sem mudanças no ranking"})
 
@@ -266,8 +264,9 @@ def loop_monitoramento():
             estado["ultima_mudanca"] = agora
             estado["total_mudancas"] += 1
             estado["historico"].insert(0, {"hora": agora, "tipo": "mudanca", "msg": "Página atualizada!"})
-            enviar_email("⚡ Página do Concurso FCC Atualizada!", f"<h2>Página atualizada!</h2><p>Detectado em: {agora}</p>")
-            enviar_telegram(f"⚡ Página do Concurso FCC Atualizada!\nDetectado em: {agora}\nTotal de mudanças: {estado['total_mudancas']}\n{estado['url']}")
+            texto = f"⚡ Página do Concurso FCC Atualizada!\nDetectado em: {agora}\nTotal de mudanças: {estado['total_mudancas']}\n{estado['url']}"
+            enviar_telegram(texto)
+            enviar_email("⚡ Página do Concurso FCC Atualizada!", f"<h2>Página Atualizada!</h2><pre>{texto}</pre>")
         else:
             estado["historico"].insert(0, {"hora": agora, "tipo": "ok", "msg": "Sem mudanças"})
 
