@@ -65,6 +65,7 @@ estado = {
         "dados_anteriores": None,
         "historico": [],
         "total_mudancas": 0,
+        "media_custom": None,
     },
 }
 
@@ -125,7 +126,9 @@ def obter_dados_ranking():
                         titulos_vals.append(float(tit.replace(",", ".")))
                     except:
                         pass
-        media_titulos = round(sum(titulos_vals) / len(titulos_vals), 2) if titulos_vals else 0.0
+        media_titulos_real = round(sum(titulos_vals) / len(titulos_vals), 2) if titulos_vals else 0.0
+        media_titulos_usar = estado["ranking"].get("media_custom") if estado["ranking"].get("media_custom") is not None else media_titulos_real
+        media_titulos = media_titulos_real
 
         # Ranking projetado: quem não tem título recebe a média
         todos_proj = []
@@ -135,11 +138,11 @@ def obter_dados_ranking():
                     obj_disc = float(linha[6].replace(",", ".")) + float(linha[7].replace(",", "."))
                     tit = linha[8].strip()
                     sem_titulo = not tit or tit in ("0,00", "0.00", "-", "")
-                    tit_val = 0.0 if not sem_titulo else 0.0
+                    tit_val = 0.0
                     try:
-                        tit_val = float(tit.replace(",", ".")) if not sem_titulo else media_titulos
+                        tit_val = float(tit.replace(",", ".")) if not sem_titulo else media_titulos_usar
                     except:
-                        tit_val = media_titulos if sem_titulo else 0.0
+                        tit_val = media_titulos_usar if sem_titulo else 0.0
                     total_proj = obj_disc + tit_val
                     todos_proj.append((total_proj, linha[0]))
                 except:
@@ -180,7 +183,8 @@ def obter_dados_ranking():
             "pos_recalculada": str(pos_recalculada),
             "total_candidatos": str(len(todos)),
             "com_titulos": str(com_titulos),
-            "media_titulos": str(media_titulos).replace(".", ","),
+            "media_titulos": str(media_titulos_real).replace(".", ","),
+            "media_titulos_usar": str(media_titulos_usar).replace(".", ","),
             "pos_projetada": str(pos_projetada),
             "ameacas": ameacas,
         }, None
@@ -208,6 +212,12 @@ def loop_ranking():
             mudancas = []
             if dados["pos_recalculada"] != ant["pos_recalculada"]:
                 mudancas.append(f"Posição Recalculada: {ant['pos_recalculada']}º → {dados['pos_recalculada']}º")
+            if dados["pos_projetada"] != ant["pos_projetada"]:
+                mudancas.append(f"Posição Projetada: {ant['pos_projetada']}º → {dados['pos_projetada']}º")
+            if dados["media_titulos"] != ant["media_titulos"]:
+                mudancas.append(f"Média Títulos: {ant['media_titulos']} → {dados['media_titulos']}")
+            if dados["com_titulos"] != ant["com_titulos"]:
+                mudancas.append(f"Títulos Preenchidos: {ant['com_titulos']} → {dados['com_titulos']}")
             if dados["class_liq_geral"] != ant["class_liq_geral"]:
                 mudancas.append(f"Class. Líquida Geral: {ant['class_liq_geral']} → {dados['class_liq_geral']}")
             if dados["situacao"] != ant["situacao"]:
@@ -508,7 +518,15 @@ __NAV__
   </div>
   <div class="painel" id="painel-proj" style="display:none">
     <h2>🔮 Projeção — Se todos receberem a média de títulos</h2>
-    <div class="linha"><span class="chave">Média de títulos (quem já preencheu)</span><span class="valor" id="d-media-tit" style="color:#a855f7">—</span></div>
+    <div class="linha"><span class="chave">Média real (quem já preencheu)</span><span class="valor" id="d-media-tit" style="color:#a855f7">—</span></div>
+    <div class="linha" style="align-items:center">
+      <span class="chave">Média usada no cálculo</span>
+      <span style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="input-media" step="0.01" min="0" max="20" style="width:80px;padding:6px 8px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:13px;text-align:center">
+        <button onclick="salvarMedia()" style="padding:6px 14px;border-radius:6px;border:none;background:#a855f7;color:white;font-size:12px;font-weight:600;cursor:pointer">Recalcular</button>
+        <button onclick="resetarMedia()" style="padding:6px 10px;border-radius:6px;border:none;background:#475569;color:white;font-size:12px;cursor:pointer" title="Usar média real">↺</button>
+      </span>
+    </div>
     <div class="linha"><span class="chave">Sua posição projetada</span><span class="valor" id="d-pos-proj" style="color:#10b981">—</span></div>
     <div class="linha"><span class="chave">Sua posição atual (c/ títulos reais)</span><span class="valor" id="d-pos-recalc2">—</span></div>
   </div>
@@ -546,6 +564,15 @@ __NAV__
 <script>
 let ultimaMudanca = null, proximaVerificacao = null;
 async function iniciarTudo() { await fetch('/api/iniciar-tudo', { method: 'POST' }); atualizar(); }
+async function salvarMedia() {
+  const val = document.getElementById('input-media').value;
+  await fetch('/api/ranking/media', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ media: val }) });
+  setTimeout(atualizar, 2000);
+}
+async function resetarMedia() {
+  await fetch('/api/ranking/media', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ media: null }) });
+  setTimeout(atualizar, 2000);
+}
 async function iniciarRanking() { await fetch('/api/ranking/iniciar', { method: 'POST' }); atualizar(); }
 async function pararRanking() { await fetch('/api/ranking/parar', { method: 'POST' }); atualizar(); }
 async function verificarRanking() { await fetch('/api/ranking/verificar', { method: 'POST' }); setTimeout(atualizar, 3000); }
@@ -567,7 +594,11 @@ async function atualizar() {
     document.getElementById('r-com-titulos').textContent = d.dados.com_titulos + ' / ' + d.dados.total_candidatos;
     // projeção
     document.getElementById('painel-proj').style.display = 'block';
-    document.getElementById('d-media-tit').textContent = d.dados.media_titulos + ' pts';
+    document.getElementById('d-media-tit').textContent = d.dados.media_titulos + ' pts (real)';
+    const inputMedia = document.getElementById('input-media');
+    if (inputMedia && inputMedia !== document.activeElement) {
+      inputMedia.value = d.dados.media_titulos_usar.replace(',', '.');
+    }
     document.getElementById('d-pos-proj').textContent = d.dados.pos_projetada + 'º de ' + d.dados.total_candidatos;
     document.getElementById('d-pos-recalc2').textContent = d.dados.pos_recalculada + 'º de ' + d.dados.total_candidatos;
     const am = d.dados.ameacas || [];
@@ -957,6 +988,23 @@ class Handler(BaseHTTPRequestHandler):
             if not estado["ranking"]["monitorando"]:
                 estado["ranking"]["monitorando"] = True
                 threading.Thread(target=loop_ranking, daemon=True).start()
+            self._ok()
+
+        elif self.path == "/api/ranking/media":
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+            val = body.get("media")
+            estado["ranking"]["media_custom"] = float(str(val).replace(",", ".")) if val not in (None, "") else None
+            def _recalc():
+                est = estado["ranking"]
+                agora = datetime.now(TZ_BRASILIA).strftime("%d/%m/%Y %H:%M:%S")
+                dados, erro = obter_dados_ranking()
+                est["ultima_verificacao"] = agora
+                est["dados"] = dados
+                if dados:
+                    est["historico"].insert(0, {"hora": agora, "tipo": "ok", "msg": f"Recalculado com média {estado['ranking']['media_custom']}"})
+                    est["historico"] = est["historico"][:50]
+            threading.Thread(target=_recalc, daemon=True).start()
             self._ok()
 
         elif self.path == "/api/ranking/limpar-historico":
