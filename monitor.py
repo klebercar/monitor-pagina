@@ -24,8 +24,8 @@ URL_MONITORADA = "https://www.concursosfcc.com.br/concursos/sface125/index.html"
 INTERVALO_SEGUNDOS = 60
 
 EMAIL_DESTINO = "klebercar@gmail.com"
-EMAIL_REMETENTE = "klebercar@gmail.com"   # Preencha com seu Gmail
-EMAIL_SENHA_APP = "vmkx hziv chuo ktjo"   # Senha de app do Gmail (não a senha normal)
+EMAIL_REMETENTE = "klebercar@gmail.com"
+EMAIL_SENHA_APP = "vmkx hziv chuo ktjo"
 
 TELEGRAM_TOKEN = "8826569151:AAHA0xAkp10HXKBApPc6Cdp7lU7qP4qaa24"
 TELEGRAM_CHAT_ID = "917318112"
@@ -33,7 +33,7 @@ TELEGRAM_CHAT_ID = "917318112"
 PORTA_SERVIDOR = int(os.environ.get("PORT", 5000))
 
 SENHA = "kleberanny"
-SESSIONS = set()  # tokens de sessão ativos
+SESSIONS = set()
 
 PLANILHA_ID = "1_I1TbFTI54YLq1sSpMWQcSGKupaFgbbPPVnh1UZ4Ig4"
 PLANILHA_GID = "1992002210"
@@ -41,7 +41,6 @@ PLANILHA_NOME = "Kleber Ribeiro Carneiro"
 PLANILHA_INSCRICAO = "0020697a"
 # =======================================================
 
-# Estado global
 estado = {
     "url": URL_MONITORADA,
     "intervalo": INTERVALO_SEGUNDOS,
@@ -116,7 +115,6 @@ def obter_dados_ranking():
 
         com_titulos = sum(1 for linha in reader[5:] if len(linha) > 8 and linha[8] and linha[8] not in ("0,00", "0.00", "-", ""))
 
-        minha_obj_disc = float(meu_dado[6].replace(",", ".")) + float(meu_dado[7].replace(",", "."))
         meu_total = float(meu_dado[9].replace(",", "."))
         limite_inferior = meu_total - 11
         ameacas = []
@@ -223,7 +221,6 @@ def enviar_telegram(mensagem):
 
 def enviar_email(assunto, corpo):
     if not EMAIL_REMETENTE or not EMAIL_SENHA_APP:
-        print("[EMAIL] Não configurado, pulando envio.")
         return False
     try:
         msg = MIMEMultipart("alternative")
@@ -231,11 +228,9 @@ def enviar_email(assunto, corpo):
         msg["From"] = EMAIL_REMETENTE
         msg["To"] = EMAIL_DESTINO
         msg.attach(MIMEText(corpo, "html"))
-
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(EMAIL_REMETENTE, EMAIL_SENHA_APP)
             server.sendmail(EMAIL_REMETENTE, EMAIL_DESTINO, msg.as_string())
-        print(f"[EMAIL] Enviado para {EMAIL_DESTINO}")
         return True
     except Exception as e:
         print(f"[EMAIL] Erro: {e}")
@@ -250,7 +245,7 @@ def loop_autoping():
             print("[AUTOPING] OK")
         except:
             pass
-        time.sleep(840)  # ping a cada 14 minutos
+        time.sleep(840)
 
 
 def loop_monitoramento():
@@ -262,34 +257,20 @@ def loop_monitoramento():
         estado["ultima_verificacao"] = agora
 
         if hash_atual is None:
-            print(f"[{agora}] ERRO ao acessar página: {info}")
             estado["historico"].insert(0, {"hora": agora, "tipo": "erro", "msg": str(info)})
         elif estado["hash_anterior"] is None:
             estado["hash_anterior"] = hash_atual
-            print(f"[{agora}] Hash inicial capturado: {hash_atual}")
             estado["historico"].insert(0, {"hora": agora, "tipo": "inicio", "msg": "Monitoramento iniciado"})
         elif hash_atual != estado["hash_anterior"]:
-            print(f"[{agora}] ⚡ MUDANÇA DETECTADA!")
             estado["hash_anterior"] = hash_atual
             estado["ultima_mudanca"] = agora
             estado["total_mudancas"] += 1
             estado["historico"].insert(0, {"hora": agora, "tipo": "mudanca", "msg": "Página atualizada!"})
-
-            corpo_email = f"""
-            <h2>⚡ Página Atualizada!</h2>
-            <p><strong>URL:</strong> <a href="{estado['url']}">{estado['url']}</a></p>
-            <p><strong>Detectado em:</strong> {agora}</p>
-            <p><strong>Total de mudanças:</strong> {estado['total_mudancas']}</p>
-            <br>
-            <p>Acesse o <a href="http://localhost:{PORTA_SERVIDOR}">painel de monitoramento</a> para mais detalhes.</p>
-            """
-            enviar_email("⚡ Página do Concurso FCC Atualizada!", corpo_email)
+            enviar_email("⚡ Página do Concurso FCC Atualizada!", f"<h2>Página atualizada!</h2><p>Detectado em: {agora}</p>")
             enviar_telegram(f"⚡ Página do Concurso FCC Atualizada!\nDetectado em: {agora}\nTotal de mudanças: {estado['total_mudancas']}\n{estado['url']}")
         else:
-            print(f"[{agora}] Sem mudanças.")
             estado["historico"].insert(0, {"hora": agora, "tipo": "ok", "msg": "Sem mudanças"})
 
-        # Mantém apenas os últimos 50 registros
         estado["historico"] = estado["historico"][:50]
 
         for i in range(estado["intervalo"], 0, -1):
@@ -299,6 +280,94 @@ def loop_monitoramento():
             estado["heartbeat"] = time.time()
             time.sleep(1)
         estado["proxima_em"] = 0
+
+
+def _nav(ativo):
+    links = [("/", "🔍 Página FCC", "p"), ("/ranking", "📊 Meu Ranking", "r"), ("/cronograma", "📅 Cronograma", "c")]
+    itens = ""
+    for href, label, key in links:
+        cor = "#e2e8f0" if key == ativo else "#94a3b8"
+        borda = "#3b82f6" if key == ativo else "transparent"
+        itens += f'<a href="{href}" style="padding:12px 24px;font-size:13px;font-weight:600;color:{cor};text-decoration:none;border-bottom:2px solid {borda};">{label}</a>'
+    return f'<nav style="background:#1e293b;border-bottom:1px solid #334155;display:flex;align-items:center;flex-wrap:wrap;">{itens}<button onclick="iniciarTudo()" style="margin-left:12px;padding:6px 16px;border-radius:8px;border:none;background:#10b981;color:white;font-size:13px;font-weight:600;cursor:pointer;">▶▶ Iniciar Tudo</button></nav>'
+
+
+HTML_CRONOGRAMA = """<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cronograma — FCC TI</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  .header { background: #1e293b; padding: 20px 32px; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .container { max-width: 900px; margin: 32px auto; padding: 0 20px; }
+  table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155; }
+  th { background: #0f172a; padding: 12px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #64748b; text-align: left; }
+  td { padding: 12px 16px; font-size: 13px; border-top: 1px solid #334155; vertical-align: top; }
+  tr.hoje td { background: #1e3a5f; }
+  tr.passado td { color: #475569; }
+  tr.proximo td { background: #1a2e1a; }
+  .num { color: #64748b; font-size: 12px; width: 36px; }
+  .data { white-space: nowrap; font-weight: 600; min-width: 140px; }
+  .data.passada { color: #475569; }
+  .data.hoje-c { color: #f59e0b; }
+  .data.proxima { color: #10b981; }
+  .data.futura { color: #3b82f6; }
+  .badge-prox { display:inline-block;background:#10b981;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle; }
+  .badge-hoje { display:inline-block;background:#f59e0b;color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:middle; }
+  .aviso { background:#1e293b;border:1px solid #334155;border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:#64748b; }
+  .destaque { font-weight: 700; color: #e2e8f0; }
+</style>
+</head>
+<body>
+<div class="header"><span>📅</span><h1>Cronograma — FCC Auditor Fiscal TI</h1></div>
+__NAV__
+<div class="container">
+  <div class="aviso">* Cronograma sujeito a alterações. Fonte: Comunicado FCC (retificado).</div>
+  <table>
+    <thead><tr><th>#</th><th>Atividade</th><th>Data Prevista</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+<script>
+async function iniciarTudo() { await fetch('/api/iniciar-tudo', { method: 'POST' }); }
+const EVENTOS = [
+  [17, "Publicação do Resultado Preliminar das Provas Objetivas e Discursivas", "2026-09-09", "2026-09-09"],
+  [18, "Vista das Folhas de Respostas das Provas Objetiva e Discursiva", "2026-09-10", "2026-09-11"],
+  [19, "Prazo para interposição de recursos quanto aos Resultados Preliminares das Provas Objetivas e Discursivas", "2026-09-10", "2026-09-11"],
+  [20, "Publicação do Edital de Resultado Definitivo das Provas Objetiva e Discursiva e Convocação para Heteroidentificação, Avaliação Biopsicossocial, Sindicância da Vida Pregressa e Envio dos Títulos", "2026-10-07", "2026-10-07"],
+  [21, "Prazo para envio dos Títulos para Avaliação", "2026-10-13", "2026-10-15"],
+  [22, "Prazo para envio das documentações comprobatórias para Análise da Sindicância da Vida Pregressa", "2026-10-13", "2026-10-15"],
+  [23, "Realização da Avaliação Biopsicossocial aos candidatos com deficiência", "2026-10-16", "2026-10-16"],
+  [24, "Realização da Comissão de Heteroidentificação dos candidatos autodeclarados negros (pretos e pardos)", "2026-10-17", "2026-10-18"],
+  [25, "Publicação do Edital de Resultado Preliminar da Comissão de Heteroidentificação e da Avaliação Biopsicossocial", "2026-10-28", "2026-10-28"],
+  [26, "Prazo para interposição de recursos quanto Resultado Preliminar da Heteroidentificação e Avaliação Biopsicossocial", "2026-10-29", "2026-10-30"],
+  [27, "Publicação do Edital de Resultado Definitivo da Heteroidentificação, Avaliação Biopsicossocial, Resultado Preliminar das Análises dos Títulos e da Sindicância da Vida Pregressa", "2026-11-25", "2026-11-25"],
+  [28, "Prazo para interposição de recursos quanto Resultado Preliminar das Análises dos Títulos e da Sindicância da Vida Pregressa", "2026-11-26", "2026-11-27"],
+  [29, "Publicação do Edital de Resultado Definitivo das Análises dos Títulos e da Sindicância da Vida Pregressa e RESULTADO FINAL do Concurso", "2026-12-18", "2026-12-18"],
+];
+function fmt(d) { return d.split('-').reverse().join('/'); }
+const hoje = new Date().toISOString().slice(0, 10);
+const tbody = document.getElementById('tbody');
+let proximoMarcado = false;
+EVENTOS.forEach(([num, desc, ini, fim]) => {
+  const passado = fim < hoje;
+  const ativo = ini <= hoje && hoje <= fim;
+  const proximo = !passado && !ativo && !proximoMarcado;
+  if (proximo) proximoMarcado = true;
+  const trClass = ativo ? 'hoje' : passado ? 'passado' : proximo ? 'proximo' : '';
+  const dataClass = ativo ? 'hoje-c' : passado ? 'passada' : proximo ? 'proxima' : 'futura';
+  const dataStr = ini === fim ? fmt(ini) : fmt(ini) + ' a ' + fmt(fim);
+  const badge = ativo ? '<span class="badge-hoje">HOJE</span>' : proximo ? '<span class="badge-prox">PRÓXIMO</span>' : '';
+  tbody.innerHTML += `<tr class="${trClass}"><td class="num">${num}</td><td class="${passado?'':'destaque'}">${desc}</td><td class="data ${dataClass}">${dataStr}${badge}</td></tr>`;
+});
+</script>
+</body>
+</html>
+"""
 
 
 HTML_LOGIN = """<!DOCTYPE html>
@@ -340,6 +409,7 @@ async function entrar() {
 </body>
 </html>"""
 
+
 HTML_RANKING = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -351,10 +421,6 @@ HTML_RANKING = """<!DOCTYPE html>
   body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
   .header { background: #1e293b; padding: 20px 32px; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 12px; }
   .header h1 { font-size: 20px; font-weight: 700; }
-  .nav { background: #1e293b; border-bottom: 1px solid #334155; display: flex; gap: 0; }
-  .nav a { padding: 12px 24px; font-size: 13px; font-weight: 600; color: #94a3b8; text-decoration: none; border-bottom: 2px solid transparent; }
-  .nav a.ativo { color: #e2e8f0; border-bottom-color: #3b82f6; }
-  .nav { align-items: center; }
   .container { max-width: 900px; margin: 32px auto; padding: 0 20px; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
   .card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; }
@@ -394,14 +460,9 @@ HTML_RANKING = """<!DOCTYPE html>
 </head>
 <body>
 <div class="header"><span>📊</span><h1>Monitor FCC — Auditor Fiscal TI</h1></div>
-<nav class="nav">
-  <a href="/">🔍 Página FCC</a>
-  <a href="/ranking" class="ativo">📊 Meu Ranking</a>
-  <button onclick="iniciarTudo()" style="margin-left:12px;padding:6px 16px;border-radius:8px;border:none;background:#10b981;color:white;font-size:13px;font-weight:600;cursor:pointer;">▶▶ Iniciar Tudo</button>
-</nav>
+__NAV__
 <div class="container">
   <div class="alerta" id="alerta">📊 <strong>Ranking atualizado!</strong> Sua posição mudou.</div>
-
   <div class="cards" id="cards-ranking">
     <div class="card azul"><div class="label">Class. Original Lista Geral</div><div class="value" id="r-class-orig">—</div></div>
     <div class="card verde"><div class="label">Class. Líquida Lista Geral</div><div class="value" id="r-class-liq">—</div></div>
@@ -412,7 +473,6 @@ HTML_RANKING = """<!DOCTYPE html>
     <div class="card" id="card-situacao"><div class="label">Situação</div><div class="value" style="font-size:14px" id="r-situacao">—</div></div>
     <div class="card" id="card-hb"><div class="label">Heartbeat</div><div class="value" style="font-size:13px" id="r-hb">—</div></div>
   </div>
-
   <div class="painel" id="painel-detalhes" style="display:none">
     <h2>📋 Detalhes — __NOME__</h2>
     <div class="linha"><span class="chave">Posição recalculada (c/ títulos)</span><span class="valor" id="d-pos-recalc">—</span></div>
@@ -428,59 +488,44 @@ HTML_RANKING = """<!DOCTYPE html>
     <div class="linha"><span class="chave">Última verificação</span><span class="valor" id="d-verif">—</span></div>
     <div class="linha"><span class="chave">Última mudança</span><span class="valor" id="d-mudanca">—</span></div>
   </div>
-
   <div class="painel" id="painel-ameacas" style="display:none">
     <h2>⚠️ Ameaças — Sem título, total entre 276,10 e 287,10 (até 11pts abaixo de você)</h2>
     <div id="ameacas-lista"></div>
   </div>
-
   <div class="controles">
     <button class="btn btn-verde" onclick="iniciarRanking()">▶ Iniciar</button>
     <button class="btn btn-vermelho" onclick="pararRanking()">⏹ Parar</button>
     <button class="btn btn-azul" onclick="verificarRanking()">🔄 Verificar Agora</button>
     <button class="btn" style="background:#475569" onclick="limparHistoricoRanking()">🗑 Limpar Histórico</button>
   </div>
-
   <div class="countdown" id="countdown-box">⏱ Próxima verificação em: <strong id="countdown-val">—</strong></div>
-
   <div class="historico">
     <h2>📋 Histórico de Mudanças</h2>
     <div id="historico-lista"></div>
   </div>
 </div>
 <script>
-let ultimaMudanca = null;
-let proximaVerificacao = null;
-
-async function iniciarTudo() {
-  await fetch('/api/iniciar-tudo', { method: 'POST' });
-  atualizar();
-}
-
+let ultimaMudanca = null, proximaVerificacao = null;
+async function iniciarTudo() { await fetch('/api/iniciar-tudo', { method: 'POST' }); atualizar(); }
 async function iniciarRanking() { await fetch('/api/ranking/iniciar', { method: 'POST' }); atualizar(); }
 async function pararRanking() { await fetch('/api/ranking/parar', { method: 'POST' }); atualizar(); }
 async function verificarRanking() { await fetch('/api/ranking/verificar', { method: 'POST' }); setTimeout(atualizar, 3000); }
 async function limparHistoricoRanking() { await fetch('/api/ranking/limpar-historico', { method: 'POST' }); atualizar(); }
-
 async function atualizar() {
   const r = await fetch('/api/ranking/estado');
   const d = await r.json();
-
   document.getElementById('r-class-orig').textContent = d.dados?.class_geral || '—';
   document.getElementById('r-class-liq').textContent = d.dados?.class_liq_geral || '—';
   document.getElementById('r-pos-recalc').textContent = d.dados ? (d.dados.pos_recalculada + 'º / ' + d.dados.total_candidatos) : '—';
   document.getElementById('r-pontos').textContent = d.dados?.total_pontos || '—';
-
   const sit = d.dados?.situacao || '—';
   document.getElementById('r-situacao').textContent = sit;
   document.getElementById('card-situacao').className = 'card ' + (sit === 'Aguardando' ? 'verde' : sit === '—' ? '' : 'amarelo');
-
   if (d.dados) {
     document.getElementById('painel-detalhes').style.display = 'block';
     document.getElementById('d-pos-recalc').textContent = d.dados.pos_recalculada + 'º de ' + d.dados.total_candidatos;
     document.getElementById('d-total-cand').textContent = d.dados.total_candidatos;
     document.getElementById('r-com-titulos').textContent = d.dados.com_titulos + ' / ' + d.dados.total_candidatos;
-
     const am = d.dados.ameacas || [];
     document.getElementById('r-ameacas').textContent = am.length;
     const painelAm = document.getElementById('painel-ameacas');
@@ -510,10 +555,8 @@ async function atualizar() {
     document.getElementById('d-eleg').textContent = d.dados.elegivel;
     document.getElementById('d-prox-geral').innerHTML = d.dados.proximo_geral ? `<span class="destaque">${d.dados.proximo_geral}</span>` : '—';
   }
-
   document.getElementById('d-verif').textContent = d.ultima_verificacao || '—';
   document.getElementById('d-mudanca').textContent = d.ultima_mudanca || 'Nenhuma';
-
   const hb = d.heartbeat;
   const cardHb = document.getElementById('card-hb');
   if (hb) {
@@ -521,7 +564,6 @@ async function atualizar() {
     document.getElementById('r-hb').textContent = seg + 's atrás';
     cardHb.className = 'card ' + (seg < 10 ? 'verde' : seg < 30 ? 'amarelo' : 'vermelho');
   }
-
   if (d.monitorando) {
     proximaVerificacao = Date.now() + d.proxima_em * 1000;
     document.getElementById('countdown-box').style.display = 'block';
@@ -529,13 +571,11 @@ async function atualizar() {
     proximaVerificacao = null;
     document.getElementById('countdown-box').style.display = 'none';
   }
-
   if (d.ultima_mudanca && d.ultima_mudanca !== ultimaMudanca) {
     ultimaMudanca = d.ultima_mudanca;
     document.getElementById('alerta').classList.add('visivel');
     setTimeout(() => document.getElementById('alerta').classList.remove('visivel'), 10000);
   }
-
   document.getElementById('historico-lista').innerHTML = d.historico.map(h => `
     <div class="item">
       <span class="hora">${h.hora}</span>
@@ -544,20 +584,19 @@ async function atualizar() {
     </div>
   `).join('') || '<div class="item" style="color:#64748b">Nenhum registro ainda.</div>';
 }
-
 setInterval(() => {
   if (proximaVerificacao) {
     const seg = Math.max(0, Math.round((proximaVerificacao - Date.now()) / 1000));
     document.getElementById('countdown-val').textContent = seg + 's';
   }
 }, 1000);
-
 atualizar();
 setInterval(atualizar, 5000);
 </script>
 </body>
 </html>
-""".replace("__NOME__", PLANILHA_NOME)
+""".replace("__NOME__", PLANILHA_NOME).replace("__NAV__", _nav("r"))
+
 
 HTML_PAGINA = """<!DOCTYPE html>
 <html lang="pt-BR">
@@ -584,12 +623,9 @@ HTML_PAGINA = """<!DOCTYPE html>
   .url-box a { color: #3b82f6; }
   .controles { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; }
   .btn { padding: 10px 20px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: .2s; }
-  .btn-verde { background: #10b981; color: white; }
-  .btn-verde:hover { background: #059669; }
-  .btn-vermelho { background: #ef4444; color: white; }
-  .btn-vermelho:hover { background: #dc2626; }
-  .btn-azul { background: #3b82f6; color: white; }
-  .btn-azul:hover { background: #2563eb; }
+  .btn-verde { background: #10b981; color: white; } .btn-verde:hover { background: #059669; }
+  .btn-vermelho { background: #ef4444; color: white; } .btn-vermelho:hover { background: #dc2626; }
+  .btn-azul { background: #3b82f6; color: white; } .btn-azul:hover { background: #2563eb; }
   .intervalo { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #94a3b8; }
   .intervalo input { width: 70px; padding: 8px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 13px; text-align: center; }
   .historico { background: #1e293b; border-radius: 12px; border: 1px solid #334155; overflow: hidden; }
@@ -607,49 +643,19 @@ HTML_PAGINA = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<div class="header">
-  <span>🔍</span>
-  <h1>Monitor de Página — FCC Concursos</h1>
-</div>
-<nav style="background:#1e293b;border-bottom:1px solid #334155;display:flex;align-items:center;">
-  <a href="/" style="padding:12px 24px;font-size:13px;font-weight:600;color:#e2e8f0;text-decoration:none;border-bottom:2px solid #3b82f6;">🔍 Página FCC</a>
-  <a href="/ranking" style="padding:12px 24px;font-size:13px;font-weight:600;color:#94a3b8;text-decoration:none;border-bottom:2px solid transparent;">📊 Meu Ranking</a>
-  <button onclick="iniciarTudo()" style="margin-left:12px;padding:6px 16px;border-radius:8px;border:none;background:#10b981;color:white;font-size:13px;font-weight:600;cursor:pointer;">▶▶ Iniciar Tudo</button>
-</nav>
+<div class="header"><span>🔍</span><h1>Monitor de Página — FCC Concursos</h1></div>
+__NAV__
 <div class="container">
   <div class="alerta" id="alerta">⚡ <strong>Mudança detectada!</strong> A página foi atualizada.</div>
-
-  <div class="url-box">
-    🔗 <a href="__URL__" target="_blank">__URL__</a>
-  </div>
-
+  <div class="url-box">🔗 <a href="__URL__" target="_blank">__URL__</a></div>
   <div class="cards">
-    <div class="card" id="card-status">
-      <div class="label">Status</div>
-      <div class="value" id="status-val">—</div>
-    </div>
-    <div class="card amarelo">
-      <div class="label">Total de Mudanças</div>
-      <div class="value" id="mudancas-val">0</div>
-    </div>
-    <div class="card azul">
-      <div class="label">Última Verificação</div>
-      <div class="value" style="font-size:13px;padding-top:4px;" id="verificacao-val">—</div>
-    </div>
-    <div class="card verde">
-      <div class="label">Última Mudança</div>
-      <div class="value" style="font-size:13px;padding-top:4px;" id="mudanca-val">—</div>
-    </div>
-    <div class="card" id="card-http">
-      <div class="label">Status HTTP</div>
-      <div class="value" id="http-val">—</div>
-    </div>
-    <div class="card" id="card-heartbeat">
-      <div class="label">Heartbeat</div>
-      <div class="value" style="font-size:13px;padding-top:4px;" id="heartbeat-val">—</div>
-    </div>
+    <div class="card" id="card-status"><div class="label">Status</div><div class="value" id="status-val">—</div></div>
+    <div class="card amarelo"><div class="label">Total de Mudanças</div><div class="value" id="mudancas-val">0</div></div>
+    <div class="card azul"><div class="label">Última Verificação</div><div class="value" style="font-size:13px;padding-top:4px;" id="verificacao-val">—</div></div>
+    <div class="card verde"><div class="label">Última Mudança</div><div class="value" style="font-size:13px;padding-top:4px;" id="mudanca-val">—</div></div>
+    <div class="card" id="card-http"><div class="label">Status HTTP</div><div class="value" id="http-val">—</div></div>
+    <div class="card" id="card-heartbeat"><div class="label">Heartbeat</div><div class="value" style="font-size:13px;padding-top:4px;" id="heartbeat-val">—</div></div>
   </div>
-
   <div class="controles">
     <button class="btn btn-verde" onclick="iniciar()">▶ Iniciar</button>
     <button class="btn btn-vermelho" onclick="parar()">⏹ Parar</button>
@@ -664,82 +670,57 @@ HTML_PAGINA = """<!DOCTYPE html>
       <button class="btn btn-azul" onclick="salvarIntervalo()" style="padding:8px 12px;">Salvar</button>
     </div>
   </div>
-
-  <div style="background:#1e293b;border-radius:12px;padding:16px 20px;margin-bottom:24px;border:1px solid #334155;font-size:13px;color:#94a3b8;" id="countdown-box" style="display:none">
+  <div style="background:#1e293b;border-radius:12px;padding:16px 20px;margin-bottom:24px;border:1px solid #334155;font-size:13px;color:#94a3b8;" id="countdown-box">
     ⏱ Próxima verificação em: <strong id="countdown-val">—</strong>
   </div>
-
   <div class="historico">
     <h2>📋 Histórico</h2>
     <div id="historico-lista"></div>
   </div>
 </div>
-
 <script>
-let ultimaMudanca = null;
-
-async function iniciar() {
-  await fetch('/api/iniciar', { method: 'POST' });
-  atualizar();
-}
-
-async function parar() {
-  await fetch('/api/parar', { method: 'POST' });
-  atualizar();
-}
-
-async function verificarAgora() {
-  await fetch('/api/verificar', { method: 'POST' });
-  setTimeout(atualizar, 2000);
-}
-
+let ultimaMudanca = null, proximaVerificacao = null;
+async function iniciarTudo() { await fetch('/api/iniciar-tudo', { method: 'POST' }); atualizar(); }
+async function iniciar() { await fetch('/api/iniciar', { method: 'POST' }); atualizar(); }
+async function parar() { await fetch('/api/parar', { method: 'POST' }); atualizar(); }
+async function verificarAgora() { await fetch('/api/verificar', { method: 'POST' }); setTimeout(atualizar, 2000); }
+async function limparHistorico() { await fetch('/api/limpar-historico', { method: 'POST' }); atualizar(); }
 async function salvarIntervalo() {
   const v = document.getElementById('intervalo-input').value;
   await fetch('/api/intervalo', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ intervalo: parseInt(v) }) });
 }
-
 async function testarEmail() {
   const r = await fetch('/api/testar-email', { method: 'POST' });
   const d = await r.json();
-  alert(d.ok ? '✅ Email de teste enviado com sucesso!' : '❌ Erro ao enviar email: ' + d.erro);
+  alert(d.ok ? '✅ Email de teste enviado!' : '❌ Erro: ' + d.erro);
 }
-
 async function testarTelegram() {
   const r = await fetch('/api/testar-telegram', { method: 'POST' });
   const d = await r.json();
-  alert(d.ok ? '✅ Mensagem enviada no Telegram!' : '❌ Erro no Telegram: ' + d.erro);
+  alert(d.ok ? '✅ Mensagem enviada no Telegram!' : '❌ Erro: ' + d.erro);
 }
-
-let proximaVerificacao = null;
-
 async function atualizar() {
   const r = await fetch('/api/estado');
   const d = await r.json();
-
   document.getElementById('status-val').textContent = d.monitorando ? '🟢 Ativo' : '🔴 Parado';
   document.getElementById('mudancas-val').textContent = d.total_mudancas;
   document.getElementById('verificacao-val').textContent = d.ultima_verificacao || '—';
   document.getElementById('mudanca-val').textContent = d.ultima_mudanca || 'Nenhuma';
   document.getElementById('intervalo-input').value = d.intervalo;
-
   const http = d.ultimo_status_http;
   const cardHttp = document.getElementById('card-http');
-  const httpVal = document.getElementById('http-val');
-  httpVal.textContent = http || '—';
+  document.getElementById('http-val').textContent = http || '—';
   cardHttp.className = 'card ' + (http === 200 ? 'verde' : http ? 'vermelho' : '');
-
   const hb = d.heartbeat;
   const cardHb = document.getElementById('card-heartbeat');
-  const hbVal = document.getElementById('heartbeat-val');
   if (hb) {
     const seg = Math.round(Date.now() / 1000 - hb);
-    hbVal.textContent = seg + 's atrás';
+    document.getElementById('heartbeat-val').textContent = seg + 's atrás';
     cardHb.className = 'card ' + (seg < 10 ? 'verde' : seg < 30 ? 'amarelo' : 'vermelho');
   } else {
-    hbVal.textContent = '—';
+    document.getElementById('heartbeat-val').textContent = '—';
     cardHb.className = 'card';
   }
-
   if (d.monitorando) {
     proximaVerificacao = Date.now() + d.proxima_em * 1000;
     document.getElementById('countdown-box').style.display = 'block';
@@ -748,15 +729,12 @@ async function atualizar() {
     document.getElementById('countdown-box').style.display = 'none';
     document.getElementById('countdown-val').textContent = '—';
   }
-
   if (d.ultima_mudanca && d.ultima_mudanca !== ultimaMudanca) {
     ultimaMudanca = d.ultima_mudanca;
     document.getElementById('alerta').classList.add('visivel');
     setTimeout(() => document.getElementById('alerta').classList.remove('visivel'), 10000);
   }
-
-  const lista = document.getElementById('historico-lista');
-  lista.innerHTML = d.historico.map(h => `
+  document.getElementById('historico-lista').innerHTML = d.historico.map(h => `
     <div class="item">
       <span class="hora">${h.hora}</span>
       <span class="badge badge-${h.tipo}">${h.tipo === 'mudanca' ? '⚡ MUDANÇA' : h.tipo === 'ok' ? '✓ OK' : h.tipo === 'erro' ? '✗ ERRO' : 'ℹ INÍCIO'}</span>
@@ -764,30 +742,21 @@ async function atualizar() {
     </div>
   `).join('') || '<div class="item" style="color:#64748b">Nenhum registro ainda.</div>';
 }
-
 setInterval(() => {
   if (proximaVerificacao) {
     const seg = Math.max(0, Math.round((proximaVerificacao - Date.now()) / 1000));
     document.getElementById('countdown-val').textContent = seg + 's';
   }
 }, 1000);
-
-async function iniciarTudo() {
-  await fetch('/api/iniciar-tudo', { method: 'POST' });
-  atualizar();
-}
-
-async function limparHistorico() {
-  await fetch('/api/limpar-historico', { method: 'POST' });
-  atualizar();
-}
-
 atualizar();
 setInterval(atualizar, 5000);
 </script>
 </body>
 </html>
-""".replace("__URL__", URL_MONITORADA)
+""".replace("__URL__", URL_MONITORADA).replace("__NAV__", _nav("p"))
+
+HTML_CRONOGRAMA = HTML_CRONOGRAMA.replace("__NAV__", _nav("c"))
+
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -830,6 +799,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(HTML_RANKING.encode("utf-8"))
+
+        elif self.path == "/cronograma":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(HTML_CRONOGRAMA.encode("utf-8"))
 
         elif self.path == "/api/estado":
             self.send_response(200)
@@ -874,8 +849,7 @@ class Handler(BaseHTTPRequestHandler):
             if not estado["monitorando"]:
                 estado["monitorando"] = True
                 estado["status"] = "ativo"
-                t = threading.Thread(target=loop_monitoramento, daemon=True)
-                t.start()
+                threading.Thread(target=loop_monitoramento, daemon=True).start()
             self._ok()
 
         elif self.path == "/api/parar":
@@ -959,18 +933,19 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/testar-email":
             ok = enviar_email(
                 "📧 Teste do Monitor de Página",
-                f"<h2>Teste de Email</h2><p>O monitor está funcionando corretamente.</p><p>URL monitorada: <a href='{estado['url']}'>{estado['url']}</a></p>"
+                f"<h2>Teste de Email</h2><p>O monitor está funcionando.</p><p>URL: <a href='{estado['url']}'>{estado['url']}</a></p>"
             )
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"ok": ok, "erro": "" if ok else "Verifique as credenciais de email"}).encode())
+            self.wfile.write(json.dumps({"ok": ok, "erro": "" if ok else "Verifique as credenciais"}).encode())
 
         elif self.path == "/api/intervalo":
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
             estado["intervalo"] = max(10, int(body.get("intervalo", 60)))
             self._ok()
+
         else:
             self.send_response(404)
             self.end_headers()
@@ -985,11 +960,7 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     print(f"🔍 Monitor de Página FCC Concursos")
     print(f"🌐 Acesse: http://localhost:{PORTA_SERVIDOR}")
-    print(f"📧 Email: {EMAIL_DESTINO}")
-    if not EMAIL_REMETENTE:
-        print(f"⚠️  Email não configurado. Edite EMAIL_REMETENTE e EMAIL_SENHA_APP no arquivo.")
     print(f"Pressione Ctrl+C para parar\n")
-
     server = HTTPServer(("0.0.0.0", PORTA_SERVIDOR), Handler)
     threading.Thread(target=loop_autoping, daemon=True).start()
     server.serve_forever()
