@@ -115,6 +115,38 @@ def obter_dados_ranking():
 
         com_titulos = sum(1 for linha in reader[5:] if len(linha) > 8 and linha[8] and linha[8] not in ("0,00", "0.00", "-", ""))
 
+        # Média de títulos de quem já preencheu
+        titulos_vals = []
+        for linha in reader[5:]:
+            if len(linha) > 8 and linha[8]:
+                tit = linha[8].strip()
+                if tit and tit not in ("0,00", "0.00", "-", ""):
+                    try:
+                        titulos_vals.append(float(tit.replace(",", ".")))
+                    except:
+                        pass
+        media_titulos = round(sum(titulos_vals) / len(titulos_vals), 2) if titulos_vals else 0.0
+
+        # Ranking projetado: quem não tem título recebe a média
+        todos_proj = []
+        for linha in reader[5:]:
+            if len(linha) > 9 and linha[0] and linha[9]:
+                try:
+                    obj_disc = float(linha[6].replace(",", ".")) + float(linha[7].replace(",", "."))
+                    tit = linha[8].strip()
+                    sem_titulo = not tit or tit in ("0,00", "0.00", "-", "")
+                    tit_val = 0.0 if not sem_titulo else 0.0
+                    try:
+                        tit_val = float(tit.replace(",", ".")) if not sem_titulo else media_titulos
+                    except:
+                        tit_val = media_titulos if sem_titulo else 0.0
+                    total_proj = obj_disc + tit_val
+                    todos_proj.append((total_proj, linha[0]))
+                except:
+                    pass
+        todos_proj.sort(key=lambda x: -x[0])
+        pos_projetada = next((i + 1 for i, (_, insc) in enumerate(todos_proj) if PLANILHA_INSCRICAO in insc), "-")
+
         meu_total = float(meu_dado[9].replace(",", "."))
         limite_inferior = meu_total - 11
         ameacas = []
@@ -148,6 +180,8 @@ def obter_dados_ranking():
             "pos_recalculada": str(pos_recalculada),
             "total_candidatos": str(len(todos)),
             "com_titulos": str(com_titulos),
+            "media_titulos": str(media_titulos).replace(".", ","),
+            "pos_projetada": str(pos_projetada),
             "ameacas": ameacas,
         }, None
     except Exception as e:
@@ -472,6 +506,12 @@ __NAV__
     <div class="card" id="card-situacao"><div class="label">Situação</div><div class="value" style="font-size:14px" id="r-situacao">—</div></div>
     <div class="card" id="card-hb"><div class="label">Heartbeat</div><div class="value" style="font-size:13px" id="r-hb">—</div></div>
   </div>
+  <div class="painel" id="painel-proj" style="display:none">
+    <h2>🔮 Projeção — Se todos receberem a média de títulos</h2>
+    <div class="linha"><span class="chave">Média de títulos (quem já preencheu)</span><span class="valor" id="d-media-tit" style="color:#a855f7">—</span></div>
+    <div class="linha"><span class="chave">Sua posição projetada</span><span class="valor" id="d-pos-proj" style="color:#10b981">—</span></div>
+    <div class="linha"><span class="chave">Sua posição atual (c/ títulos reais)</span><span class="valor" id="d-pos-recalc2">—</span></div>
+  </div>
   <div class="painel" id="painel-detalhes" style="display:none">
     <h2>📋 Detalhes — __NOME__</h2>
     <div class="linha"><span class="chave">Posição recalculada (c/ títulos)</span><span class="valor" id="d-pos-recalc">—</span></div>
@@ -525,6 +565,11 @@ async function atualizar() {
     document.getElementById('d-pos-recalc').textContent = d.dados.pos_recalculada + 'º de ' + d.dados.total_candidatos;
     document.getElementById('d-total-cand').textContent = d.dados.total_candidatos;
     document.getElementById('r-com-titulos').textContent = d.dados.com_titulos + ' / ' + d.dados.total_candidatos;
+    // projeção
+    document.getElementById('painel-proj').style.display = 'block';
+    document.getElementById('d-media-tit').textContent = d.dados.media_titulos + ' pts';
+    document.getElementById('d-pos-proj').textContent = d.dados.pos_projetada + 'º de ' + d.dados.total_candidatos;
+    document.getElementById('d-pos-recalc2').textContent = d.dados.pos_recalculada + 'º de ' + d.dados.total_candidatos;
     const am = d.dados.ameacas || [];
     document.getElementById('r-ameacas').textContent = am.length;
     const painelAm = document.getElementById('painel-ameacas');
