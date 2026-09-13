@@ -1,0 +1,1 @@
+# sem dependencias externas, usa apenas stdlib do Python
