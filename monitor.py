@@ -326,7 +326,7 @@ def loop_monitoramento():
 
 
 def _nav(ativo):
-    links = [("/", "🔍 Página FCC", "p"), ("/ranking", "📊 Meu Ranking", "r"), ("/cronograma", "📅 Cronograma", "c")]
+    links = [("/", "🔍 Página FCC", "p"), ("/ranking", "📊 Meu Ranking", "r"), ("/cronograma", "📅 Cronograma", "c"), ("/titulos", "📎 Títulos", "t")]
     itens = ""
     for href, label, key in links:
         cor = "#e2e8f0" if key == ativo else "#94a3b8"
@@ -334,6 +334,319 @@ def _nav(ativo):
         itens += f'<a href="{href}" style="padding:12px 24px;font-size:13px;font-weight:600;color:{cor};text-decoration:none;border-bottom:2px solid {borda};">{label}</a>'
     return f'<nav style="background:#1e293b;border-bottom:1px solid #334155;display:flex;align-items:center;flex-wrap:wrap;">{itens}<button onclick="iniciarTudo()" style="margin-left:12px;padding:6px 16px;border-radius:8px;border:none;background:#10b981;color:white;font-size:13px;font-weight:600;cursor:pointer;">▶▶ Iniciar Tudo</button></nav>'
 
+
+HTML_TITULOS = """<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Títulos — FCC TI</title>
+<style>
+  * { margin:0;padding:0;box-sizing:border-box; }
+  body { font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh; }
+  .header { background:#1e293b;padding:20px 32px;border-bottom:1px solid #334155;display:flex;align-items:center;gap:12px; }
+  .header h1 { font-size:20px;font-weight:700; }
+  .container { max-width:900px;margin:32px auto;padding:0 20px; }
+  .painel { background:#1e293b;border-radius:12px;border:1px solid #334155;padding:24px;margin-bottom:24px; }
+  .painel h2 { font-size:14px;color:#94a3b8;margin-bottom:16px;display:flex;align-items:center;gap:8px; }
+  .alinea { border:1px solid #334155;border-radius:10px;margin-bottom:16px;overflow:hidden; }
+  .alinea-header { display:flex;align-items:center;gap:12px;padding:14px 16px;background:#0f172a;cursor:pointer; }
+  .alinea-letra { width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0; }
+  .alinea-titulo { flex:1;font-size:13px;font-weight:600; }
+  .alinea-pts { font-size:13px;font-weight:700;white-space:nowrap; }
+  .alinea-body { padding:16px;border-top:1px solid #334155;display:none; }
+  .alinea-body.aberto { display:block; }
+  .campo { margin-bottom:12px; }
+  .campo label { display:block;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px; }
+  .campo input[type=number], .campo input[type=text] { width:100%;padding:8px 12px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:13px; }
+  .campo-row { display:flex;gap:12px; }
+  .campo-row .campo { flex:1; }
+  .resultado { background:#0f172a;border-radius:12px;border:1px solid #334155;padding:20px;margin-bottom:24px; }
+  .resultado h2 { font-size:14px;color:#94a3b8;margin-bottom:16px; }
+  .res-linha { display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1e293b;font-size:13px; }
+  .res-linha:last-child { border-bottom:none; }
+  .res-chave { color:#64748b; }
+  .res-val { font-weight:700; }
+  .total-box { background:#1e3a5f;border:1px solid #3b82f6;border-radius:10px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:24px; }
+  .total-box .label { font-size:13px;color:#93c5fd; }
+  .total-box .valor { font-size:28px;font-weight:700;color:#3b82f6; }
+  .docs { background:#1e293b;border-radius:12px;border:1px solid #334155;padding:24px;margin-bottom:24px; }
+  .docs h2 { font-size:14px;color:#94a3b8;margin-bottom:16px; }
+  .doc-item { display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #334155;font-size:13px;align-items:flex-start; }
+  .doc-item:last-child { border-bottom:none; }
+  .doc-icon { font-size:16px;flex-shrink:0;margin-top:1px; }
+  .doc-texto { flex:1; }
+  .doc-obs { font-size:11px;color:#64748b;margin-top:3px; }
+  .aviso-max { background:#422006;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;font-size:12px;color:#fcd34d;margin-top:8px;display:none; }
+  .aviso-max.visivel { display:block; }
+  .badge-max { background:#10b981;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px; }
+</style>
+</head>
+<body>
+<div class="header"><span>📎</span><h1>Calculadora de Títulos — FCC Auditor Fiscal TI</h1></div>
+__NAV__
+<div class="container">
+
+  <div class="painel">
+    <h2>📊 Pontuação por Alínea — clique para expandir e editar</h2>
+
+    <!-- ALINEA A -->
+    <div class="alinea">
+      <div class="alinea-header" onclick="toggle('a')">
+        <div class="alinea-letra" style="background:#1e3a5f;color:#3b82f6">A</div>
+        <div class="alinea-titulo">Doutorado relacionado ao cargo (MEC)</div>
+        <div class="alinea-pts" id="pts-a" style="color:#64748b">0,00 pts</div>
+      </div>
+      <div class="alinea-body" id="body-a">
+        <div class="campo">
+          <label>Possui diploma/certificado de Doutorado?</label>
+          <select onchange="calcular()" id="sel-a" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:13px">
+            <option value="0">Não</option>
+            <option value="4.8">Sim — +4,80 pts</option>
+          </select>
+        </div>
+        <div class="doc-item" id="doc-a" style="display:none">
+          <div class="doc-icon">📄</div>
+          <div class="doc-texto">Diploma ou certificado/declaração de conclusão de Doutorado <strong>acompanhado de histórico escolar</strong>, expedido por instituição reconhecida pelo MEC.<div class="doc-obs">Formatos aceitos: JPEG, JPG, PNG ou PDF. Máx 5 MB por arquivo.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALINEA B -->
+    <div class="alinea">
+      <div class="alinea-header" onclick="toggle('b')">
+        <div class="alinea-letra" style="background:#1e3a5f;color:#3b82f6">B</div>
+        <div class="alinea-titulo">Mestrado relacionado ao cargo (MEC)</div>
+        <div class="alinea-pts" id="pts-b" style="color:#64748b">0,00 pts</div>
+      </div>
+      <div class="alinea-body" id="body-b">
+        <div class="campo">
+          <label>Possui diploma/certificado de Mestrado?</label>
+          <select onchange="calcular()" id="sel-b" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:13px">
+            <option value="0">Não</option>
+            <option value="2.4">Sim — +2,40 pts</option>
+          </select>
+        </div>
+        <div class="doc-item" id="doc-b" style="display:none">
+          <div class="doc-icon">📄</div>
+          <div class="doc-texto">Diploma ou certificado/declaração de conclusão de Mestrado <strong>acompanhado de histórico escolar</strong>, expedido por instituição reconhecida pelo MEC.<div class="doc-obs">Formatos aceitos: JPEG, JPG, PNG ou PDF. Máx 5 MB por arquivo.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALINEA C -->
+    <div class="alinea">
+      <div class="alinea-header" onclick="toggle('c')">
+        <div class="alinea-letra" style="background:#1e3a5f;color:#3b82f6">C</div>
+        <div class="alinea-titulo">Especialização ≥360h relacionada ao cargo</div>
+        <div class="alinea-pts" id="pts-c" style="color:#64748b">0,00 pts</div>
+      </div>
+      <div class="alinea-body" id="body-c">
+        <div class="campo">
+          <label>Quantidade de certificados de Especialização (máx 2, vale 1,20 cada)</label>
+          <input type="number" id="qtd-c" min="0" max="2" value="0" oninput="calcular()">
+        </div>
+        <div class="doc-item" id="doc-c" style="display:none">
+          <div class="doc-icon">📄</div>
+          <div class="doc-texto">Certificado de pós-graduação em especialização com carga horária mínima de 360h, <strong>acompanhado de histórico escolar</strong>.<div class="doc-obs">Formatos aceitos: JPEG, JPG, PNG ou PDF. Máx 5 MB por arquivo.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALINEA D -->
+    <div class="alinea">
+      <div class="alinea-header" onclick="toggle('d')">
+        <div class="alinea-letra" style="background:#14532d;color:#10b981">D</div>
+        <div class="alinea-titulo">Aprovação em concurso público / processo seletivo</div>
+        <div class="alinea-pts" id="pts-d" style="color:#10b981">0,80 pts ✓</div>
+      </div>
+      <div class="alinea-body aberto" id="body-d">
+        <div class="campo">
+          <label>Quantidade de aprovações (máx 2, vale 0,40 cada)</label>
+          <input type="number" id="qtd-d" min="0" max="2" value="2" oninput="calcular()">
+        </div>
+        <div class="aviso-max visivel" id="max-d">⚠️ Limite máximo atingido: 0,80 pts</div>
+        <div style="margin-top:12px">
+          <div class="doc-item">
+            <div class="doc-icon">📄</div>
+            <div class="doc-texto"><strong>Para cada aprovação:</strong> Certidão expedida pelo setor de pessoal do órgão ou certificado do órgão executor, contendo: cargo concorrido, requisito/escolaridade, aprovação e/ou classificação.<div class="doc-obs">Alternativa: Diário Oficial com resultado final contendo cargo, escolaridade exigida, atribuições e classificação com identificação clara do candidato.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALINEA E -->
+    <div class="alinea">
+      <div class="alinea-header" onclick="toggle('e')">
+        <div class="alinea-letra" style="background:#14532d;color:#10b981">E</div>
+        <div class="alinea-titulo">Exercício de atividade profissional de nível superior</div>
+        <div class="alinea-pts" id="pts-e" style="color:#10b981">9,60 pts ✓</div>
+      </div>
+      <div class="alinea-body aberto" id="body-e">
+        <p style="font-size:12px;color:#64748b;margin-bottom:12px">1,20 pts por ano completo, sem sobreposição de tempo. Máximo: 9,60 pts (8 anos).</p>
+        <div id="periodos-e"></div>
+        <button onclick="adicionarPeriodo()" style="margin-top:8px;padding:7px 16px;border-radius:6px;border:none;background:#334155;color:#e2e8f0;font-size:12px;cursor:pointer">➕ Adicionar período</button>
+        <div class="aviso-max" id="max-e"></div>
+        <div style="margin-top:16px">
+          <div class="doc-item">
+            <div class="doc-icon">📄</div>
+            <div class="doc-texto"><strong>Instituição pública — enviar cumulativamente:</strong>
+              <div class="doc-obs">a) Diploma do curso de nível superior (para verificar data de conclusão)</div>
+              <div class="doc-obs">b) Declaração/certidão de tempo de serviço emitida pelo RH, informando: período (início e fim), escolaridade do cargo, espécie do serviço de nível superior e descrição das atividades.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="total-box">
+    <div>
+      <div class="label">Pontuação Total de Títulos</div>
+      <div style="font-size:11px;color:#64748b;margin-top:4px">Limite máximo: 20,00 pts</div>
+    </div>
+    <div class="valor" id="total-geral">10,40</div>
+  </div>
+
+  <div class="resultado" id="resumo-box">
+    <h2>📋 Resumo por Alínea</h2>
+    <div class="res-linha"><span class="res-chave">A — Doutorado</span><span class="res-val" id="res-a">0,00</span></div>
+    <div class="res-linha"><span class="res-chave">B — Mestrado</span><span class="res-val" id="res-b">0,00</span></div>
+    <div class="res-linha"><span class="res-chave">C — Especialização</span><span class="res-val" id="res-c">0,00</span></div>
+    <div class="res-linha"><span class="res-chave">D — Aprovações em concurso</span><span class="res-val" id="res-d">0,80</span></div>
+    <div class="res-linha"><span class="res-chave">E — Experiência profissional</span><span class="res-val" id="res-e">9,60</span></div>
+  </div>
+
+  <div class="docs" id="docs-box">
+    <h2>📂 Documentos que você precisa enviar</h2>
+    <div id="docs-lista"></div>
+    <div style="margin-top:12px;font-size:11px;color:#64748b">⚠️ Envio exclusivamente pelo site www.concursosfcc.com.br. Formatos: JPEG, JPG, PNG ou PDF. Máx 5 MB por arquivo. Não serão aceitos protocolos.</div>
+  </div>
+
+</div>
+<script>
+async function iniciarTudo() { await fetch('/api/iniciar-tudo', { method: 'POST' }); }
+
+function toggle(id) {
+  const b = document.getElementById('body-' + id);
+  b.classList.toggle('aberto');
+}
+
+let periodos = [{inicio:'2010-01-01', fim:''}];
+
+function adicionarPeriodo() {
+  periodos.push({inicio:'', fim:''});
+  renderPeriodos();
+  calcular();
+}
+
+function removerPeriodo(i) {
+  periodos.splice(i, 1);
+  renderPeriodos();
+  calcular();
+}
+
+function renderPeriodos() {
+  const cont = document.getElementById('periodos-e');
+  cont.innerHTML = periodos.map((p, i) => `
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <div style="flex:1">
+        <label style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Início</label>
+        <input type="date" value="${p.inicio}" onchange="periodos[${i}].inicio=this.value;calcular()" style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:13px">
+      </div>
+      <div style="flex:1">
+        <label style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Fim (ou em branco se atual)</label>
+        <input type="date" value="${p.fim}" onchange="periodos[${i}].fim=this.value;calcular()" style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:13px">
+      </div>
+      ${periodos.length > 1 ? `<button onclick="removerPeriodo(${i})" style="margin-top:16px;padding:7px 10px;border-radius:6px;border:none;background:#7f1d1d;color:#fca5a5;font-size:12px;cursor:pointer">✕</button>` : ''}
+    </div>
+  `).join('');
+}
+
+function calcularAnosE() {
+  // Soma dias sem sobreposicao
+  const hoje = new Date();
+  const intervalos = periodos
+    .filter(p => p.inicio)
+    .map(p => ({
+      ini: new Date(p.inicio),
+      fim: p.fim ? new Date(p.fim) : hoje
+    }))
+    .filter(p => p.fim > p.ini)
+    .sort((a, b) => a.ini - b.ini);
+
+  // merge sobreposicoes
+  const merged = [];
+  for (const iv of intervalos) {
+    if (merged.length && iv.ini <= merged[merged.length-1].fim) {
+      merged[merged.length-1].fim = new Date(Math.max(merged[merged.length-1].fim, iv.fim));
+    } else {
+      merged.push({...iv});
+    }
+  }
+  let dias = 0;
+  for (const iv of merged) dias += (iv.fim - iv.ini) / 86400000;
+  return Math.floor(dias / 365);
+}
+
+function fmt(v) { return v.toFixed(2).replace('.', ','); }
+
+function calcular() {
+  const a = parseFloat(document.getElementById('sel-a').value) || 0;
+  const b = parseFloat(document.getElementById('sel-b').value) || 0;
+  const c = Math.min(2, parseInt(document.getElementById('qtd-c').value) || 0) * 1.2;
+  const d = Math.min(2, parseInt(document.getElementById('qtd-d').value) || 0) * 0.4;
+  const anosE = calcularAnosE();
+  const e = Math.min(9.6, anosE * 1.2);
+
+  document.getElementById('pts-a').textContent = fmt(a) + ' pts' + (a > 0 ? ' ✓' : '');
+  document.getElementById('pts-a').style.color = a > 0 ? '#10b981' : '#64748b';
+  document.getElementById('pts-b').textContent = fmt(b) + ' pts' + (b > 0 ? ' ✓' : '');
+  document.getElementById('pts-b').style.color = b > 0 ? '#10b981' : '#64748b';
+  document.getElementById('pts-c').textContent = fmt(c) + ' pts' + (c > 0 ? ' ✓' : '');
+  document.getElementById('pts-c').style.color = c > 0 ? '#10b981' : '#64748b';
+  document.getElementById('pts-d').textContent = fmt(d) + ' pts' + (d > 0 ? ' ✓' : '');
+  document.getElementById('pts-e').textContent = fmt(e) + ' pts (' + anosE + ' anos)' + (e > 0 ? ' ✓' : '');
+
+  document.getElementById('doc-a').style.display = a > 0 ? 'flex' : 'none';
+  document.getElementById('doc-b').style.display = b > 0 ? 'flex' : 'none';
+  document.getElementById('doc-c').style.display = c > 0 ? 'flex' : 'none';
+  document.getElementById('max-d').classList.toggle('visivel', d >= 0.8);
+  const maxE = document.getElementById('max-e');
+  if (e >= 9.6) { maxE.textContent = '⚠️ Limite máximo atingido: 9,60 pts (' + anosE + ' anos computados, mas só 8 são aproveitados)'; maxE.classList.add('visivel'); }
+  else { maxE.classList.remove('visivel'); }
+
+  const total = Math.min(20, a + b + c + d + e);
+  document.getElementById('total-geral').textContent = fmt(total) + ' pts';
+  document.getElementById('total-geral').style.color = total >= 10 ? '#10b981' : '#3b82f6';
+
+  document.getElementById('res-a').textContent = fmt(a);
+  document.getElementById('res-b').textContent = fmt(b);
+  document.getElementById('res-c').textContent = fmt(c);
+  document.getElementById('res-d').textContent = fmt(d);
+  document.getElementById('res-e').textContent = fmt(e) + ' (' + anosE + ' anos)';
+
+  // Documentos
+  const docs = [];
+  if (a > 0) docs.push({icon:'🎓', texto:'Diploma ou certificado de <strong>Doutorado</strong> + histórico escolar', obs:'Alínea A'});
+  if (b > 0) docs.push({icon:'🎓', texto:'Diploma ou certificado de <strong>Mestrado</strong> + histórico escolar', obs:'Alínea B'});
+  if (c > 0) docs.push({icon:'🎓', texto:`${Math.min(2,parseInt(document.getElementById('qtd-c').value)||0)} certificado(s) de <strong>Especialização</strong> (≥360h) + histórico escolar`, obs:'Alínea C'});
+  if (d > 0) docs.push({icon:'📄', texto:`${Math.min(2,parseInt(document.getElementById('qtd-d').value)||0)} certidão(s) de <strong>aprovação em concurso</strong> (setor de pessoal ou Diário Oficial)`, obs:'Alínea D — deve conter: cargo, escolaridade exigida, aprovação/classificação'});
+  if (e > 0) docs.push(
+    {icon:'🎓', texto:'Diploma de curso de <strong>nível superior</strong> (para verificar data de conclusão)', obs:'Alínea E'},
+    {icon:'📄', texto:'Declaração/certidão de <strong>tempo de serviço</strong> emitida pelo RH da instituição', obs:'Alínea E — deve conter: período (início e fim), escolaridade do cargo, espécie do serviço e descrição das atividades'}
+  );
+  document.getElementById('docs-lista').innerHTML = docs.length
+    ? docs.map(d => `<div class="doc-item"><div class="doc-icon">${d.icon}</div><div class="doc-texto">${d.texto}<div class="doc-obs">${d.obs}</div></div></div>`).join('')
+    : '<div style="color:#64748b;font-size:13px">Nenhum título selecionado.</div>';
+}
+
+renderPeriodos();
+calcular();
+</script>
+</body>
+</html>
+""".replace("__NAV__", _nav("t"))
 
 HTML_CRONOGRAMA = """<!DOCTYPE html>
 <html lang="pt-BR">
@@ -874,6 +1187,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(HTML_RANKING.encode("utf-8"))
+
+        elif self.path == "/titulos":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(HTML_TITULOS.encode("utf-8"))
 
         elif self.path == "/cronograma":
             self.send_response(200)
