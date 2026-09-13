@@ -11,6 +11,7 @@ import threading
 import time
 import json
 import os
+import secrets
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -28,6 +29,9 @@ TELEGRAM_TOKEN = "8826569151:AAHA0xAkp10HXKBApPc6Cdp7lU7qP4qaa24"
 TELEGRAM_CHAT_ID = "917318112"
 
 PORTA_SERVIDOR = 5000
+
+SENHA = "kleberanny"
+SESSIONS = set()  # tokens de sessão ativos
 
 PLANILHA_ID = "1_I1TbFTI54YLq1sSpMWQcSGKupaFgbbPPVnh1UZ4Ig4"
 PLANILHA_GID = "1992002210"
@@ -283,6 +287,45 @@ def loop_monitoramento():
             time.sleep(1)
         estado["proxima_em"] = 0
 
+
+HTML_LOGIN = """<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Monitor FCC</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .box { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 40px; width: 100%; max-width: 360px; }
+  h1 { font-size: 20px; margin-bottom: 8px; }
+  p { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+  input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 14px; margin-bottom: 16px; }
+  button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #3b82f6; color: white; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button:hover { background: #2563eb; }
+  .erro { color: #ef4444; font-size: 13px; margin-bottom: 12px; display: none; }
+  .erro.visivel { display: block; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🔍 Monitor FCC</h1>
+  <p>Digite a senha para acessar o painel.</p>
+  <div class="erro" id="erro">Senha incorreta.</div>
+  <input type="password" id="senha" placeholder="Senha" onkeydown="if(event.key==='Enter') entrar()">
+  <button onclick="entrar()">Entrar</button>
+</div>
+<script>
+async function entrar() {
+  const senha = document.getElementById('senha').value;
+  const r = await fetch('/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ senha }) });
+  const d = await r.json();
+  if (d.ok) window.location.href = '/';
+  else document.getElementById('erro').classList.add('visivel');
+}
+</script>
+</body>
+</html>"""
 
 HTML_RANKING = """<!DOCTYPE html>
 <html lang="pt-BR">
@@ -723,9 +766,33 @@ setInterval(atualizar, 5000);
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
-        pass  # Silencia logs do servidor
+        pass
+
+    def _autenticado(self):
+        cookie = self.headers.get("Cookie", "")
+        for parte in cookie.split(";"):
+            k, _, v = parte.strip().partition("=")
+            if k == "session" and v in SESSIONS:
+                return True
+        return False
+
+    def _redirecionar_login(self):
+        self.send_response(302)
+        self.send_header("Location", "/login")
+        self.end_headers()
 
     def do_GET(self):
+        if self.path == "/login":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(HTML_LOGIN.encode("utf-8"))
+            return
+
+        if not self._autenticado():
+            self._redirecionar_login()
+            return
+
         if self.path == "/":
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -755,6 +822,28 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_POST(self):
+        if self.path == "/login":
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+            if body.get("senha") == SENHA:
+                token = secrets.token_hex(16)
+                SESSIONS.add(token)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Set-Cookie", f"session={token}; Path=/; HttpOnly")
+                self.end_headers()
+                self.wfile.write(b'{"ok":true}')
+            else:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"ok":false}')
+            return
+
+        if not self._autenticado():
+            self._redirecionar_login()
+            return
+
         if self.path == "/api/iniciar":
             if not estado["monitorando"]:
                 estado["monitorando"] = True
