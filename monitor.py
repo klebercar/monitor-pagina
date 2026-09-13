@@ -67,6 +67,7 @@ estado = {
         "total_mudancas": 0,
         "media_custom": None,
     },
+    "pregressa": {},
 }
 
 
@@ -326,7 +327,7 @@ def loop_monitoramento():
 
 
 def _nav(ativo):
-    links = [("/", "🔍 Página FCC", "p"), ("/ranking", "📊 Meu Ranking", "r"), ("/cronograma", "📅 Cronograma", "c"), ("/titulos", "📎 Títulos", "t")]
+    links = [("/", "🔍 Página FCC", "p"), ("/ranking", "📊 Meu Ranking", "r"), ("/cronograma", "📅 Cronograma", "c"), ("/titulos", "📎 Títulos", "t"), ("/pregressa", "📋 Vida Pregressa", "v")]
     itens = ""
     for href, label, key in links:
         cor = "#e2e8f0" if key == ativo else "#94a3b8"
@@ -334,6 +335,164 @@ def _nav(ativo):
         itens += f'<a href="{href}" style="padding:12px 24px;font-size:13px;font-weight:600;color:{cor};text-decoration:none;border-bottom:2px solid {borda};">{label}</a>'
     return f'<nav style="background:#1e293b;border-bottom:1px solid #334155;display:flex;align-items:center;flex-wrap:wrap;">{itens}<button onclick="iniciarTudo()" style="margin-left:12px;padding:6px 16px;border-radius:8px;border:none;background:#10b981;color:white;font-size:13px;font-weight:600;cursor:pointer;">▶▶ Iniciar Tudo</button></nav>'
 
+
+HTML_PREGRESSA = """<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vida Pregressa — FCC TI</title>
+<style>
+  * { margin:0;padding:0;box-sizing:border-box; }
+  body { font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh; }
+  .header { background:#1e293b;padding:20px 32px;border-bottom:1px solid #334155;display:flex;align-items:center;gap:12px; }
+  .header h1 { font-size:20px;font-weight:700; }
+  .container { max-width:900px;margin:32px auto;padding:0 20px; }
+  .painel { background:#1e293b;border-radius:12px;border:1px solid #334155;padding:24px;margin-bottom:24px; }
+  .painel h2 { font-size:14px;color:#94a3b8;margin-bottom:16px; }
+  .doc-card { border:1px solid #334155;border-radius:10px;margin-bottom:12px;overflow:hidden; }
+  .doc-top { display:flex;align-items:center;gap:12px;padding:14px 16px;background:#0f172a; }
+  .doc-num { width:36px;height:28px;border-radius:6px;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#64748b;flex-shrink:0; }
+  .doc-titulo { flex:1;font-size:13px;font-weight:600; }
+  .status-btn { padding:5px 12px;border-radius:20px;border:none;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap; }
+  .s-pendente { background:#334155;color:#94a3b8; }
+  .s-pronto { background:#14532d;color:#4ade80; }
+  .s-atencao { background:#422006;color:#fbbf24; }
+  .doc-body { padding:14px 16px;border-top:1px solid #334155; }
+  .campo-row { display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px; }
+  .campo { flex:1;min-width:160px; }
+  .campo label { display:block;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px; }
+  .campo input { width:100%;padding:7px 10px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:13px; }
+  .campo textarea { width:100%;padding:7px 10px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:13px;resize:vertical;min-height:52px; }
+  .validade-alerta { font-size:11px;margin-top:6px;padding:5px 10px;border-radius:6px; }
+  .val-ok { background:#14532d;color:#4ade80; }
+  .val-warn { background:#422006;color:#fbbf24; }
+  .val-venc { background:#7f1d1d;color:#fca5a5; }
+  .resumo-bar { display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px; }
+  .resumo-card { flex:1;min-width:100px;background:#1e293b;border-radius:10px;border:1px solid #334155;padding:16px;text-align:center; }
+  .resumo-card .num { font-size:28px;font-weight:700; }
+  .resumo-card .lab { font-size:11px;color:#64748b;margin-top:4px; }
+  .elim { background:#1e293b;border-radius:12px;border:1px solid #7f1d1d;padding:20px;margin-bottom:24px; }
+  .elim h2 { font-size:14px;color:#fca5a5;margin-bottom:14px; }
+  .elim-item { display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #334155;font-size:13px;align-items:flex-start; }
+  .elim-item:last-child { border-bottom:none; }
+  .btn-salvar { padding:10px 24px;border-radius:8px;border:none;background:#3b82f6;color:white;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px; }
+  .aviso-90 { background:#1e293b;border:1px solid #f59e0b;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:#fcd34d; }
+</style>
+</head>
+<body>
+<div class="header"><span>📋</span><h1>Sindicância da Vida Pregressa — FCC Auditor Fiscal TI</h1></div>
+__NAV__
+<div class="container">
+  <div class="aviso-90">⚠️ Certidões com validade de <strong>90 dias</strong> devem ser expedidas no máximo 90 dias antes da data de entrega fixada no edital (prevista para 13–15/10/2026). Planeje a emissão com antecedência.</div>
+  <div class="resumo-bar">
+    <div class="resumo-card"><div class="num" id="cnt-pronto" style="color:#4ade80">0</div><div class="lab">✅ Prontos</div></div>
+    <div class="resumo-card"><div class="num" id="cnt-pendente" style="color:#94a3b8">0</div><div class="lab">⏳ Pendentes</div></div>
+    <div class="resumo-card"><div class="num" id="cnt-atencao" style="color:#fbbf24">0</div><div class="lab">⚠️ Atenção</div></div>
+    <div class="resumo-card"><div class="num" id="cnt-total" style="color:#3b82f6">0</div><div class="lab">Total</div></div>
+  </div>
+  <div class="painel">
+    <h2>📂 Documentos Exigidos — item 11.2 (clique no status para alterar)</h2>
+    <div id="docs-container"></div>
+    <button class="btn-salvar" onclick="salvar()">💾 Salvar progresso</button>
+  </div>
+  <div class="elim">
+    <h2>🚨 Itens Eliminatórios — item 11.3 (verifique se nenhum se aplica a você)</h2>
+    <div class="elim-item"><div>✅</div><div>Condenado em ação penal transitada em julgado ou excluído do serviço público por processo disciplinar</div></div>
+    <div class="elim-item"><div>✅</div><div>Possui registros criminais</div></div>
+    <div class="elim-item"><div>✅</div><div>Declaração falsa ou omissão de registro relevante sobre vida pregressa</div></div>
+    <div class="elim-item"><div>✅</div><div>Prática de ato atentatório à moral e aos bons costumes</div></div>
+    <div class="elim-item"><div>✅</div><div>Demissão por justa causa nos termos da legislação trabalhista</div></div>
+    <div class="elim-item"><div>✅</div><div>Figurar como autor em inquérito policial, TCO ou procedimento disciplinar, ou como réu em ação penal</div></div>
+    <div style="margin-top:12px;font-size:12px;color:#64748b">Se nenhum item acima se aplica, você está apto para a etapa de Sindicância.</div>
+  </div>
+</div>
+<script>
+async function iniciarTudo() { await fetch('/api/iniciar-tudo', { method: 'POST' }); }
+const DOCS = [
+  {id:'jf',  num:'I-a', titulo:'Certidão de antecedentes criminais — Justiça Federal', val90:true, obs:'Cidade onde reside/residiu nos últimos 5 anos'},
+  {id:'je',  num:'I-b', titulo:'Certidão de antecedentes criminais — Justiça Estadual (CE)', val90:true, obs:'Cidade onde reside/residiu nos últimos 5 anos'},
+  {id:'jmf', num:'I-c', titulo:'Certidão de antecedentes criminais — Justiça Militar Federal', val90:true, obs:'Inclusive para candidatos do sexo feminino'},
+  {id:'jme', num:'I-d', titulo:'Certidão de antecedentes criminais — Justiça Militar Estadual', val90:true, obs:'Inclusive para candidatos do sexo feminino'},
+  {id:'jel', num:'II',  titulo:'Certidão de antecedentes criminais — Justiça Eleitoral', val90:false, obs:''},
+  {id:'prot',num:'III', titulo:'Certidões dos cartórios de protestos de títulos', val90:false, obs:'Cidade onde reside/residiu nos últimos 5 anos'},
+  {id:'exec',num:'IV',  titulo:'Certidões dos cartórios de execução cível', val90:false, obs:'Cidade onde reside/residiu nos últimos 5 anos'},
+  {id:'dec1',num:'V',   titulo:'Declaração do candidato — cidades onde residiu nos últimos 5 anos', val90:false, obs:'Própria declaração assinada'},
+  {id:'dec2',num:'VI',  titulo:'Declaração do candidato — sem condenação definitiva nem punição disciplinar', val90:false, obs:'Declaração firmada pelo próprio candidato'},
+  {id:'pol', num:'VII', titulo:'Folha de antecedentes / atestado expedido pela polícia estadual', val90:true, obs:'Expedida no máximo há 90 dias'},
+  {id:'org', num:'VIII',titulo:'Declaração do órgão público — sem punição por improbidade administrativa', val90:true, obs:'Expedida no máximo há 90 dias. Aplica-se a servidores públicos.'},
+];
+let dados = {};
+async function carregar() {
+  const r = await fetch('/api/pregressa');
+  dados = await r.json();
+  renderDocs();
+  atualizarResumo();
+}
+function renderDocs() {
+  document.getElementById('docs-container').innerHTML = DOCS.map(doc => {
+    const d = dados[doc.id] || {status:'pendente', data_emissao:'', obs:''};
+    return `<div class="doc-card">
+      <div class="doc-top">
+        <div class="doc-num">${doc.num}</div>
+        <div class="doc-titulo">${doc.titulo}${doc.obs?'<div style="font-size:11px;color:#64748b;font-weight:400;margin-top:2px">'+doc.obs+'</div>':''}</div>
+        <button class="status-btn s-${d.status}" id="btn-${doc.id}" onclick="toggleStatus('${doc.id}')">${labelStatus(d.status)}</button>
+      </div>
+      <div class="doc-body">
+        <div class="campo-row">
+          ${doc.val90?`<div class="campo" style="max-width:200px"><label>Data de emissão</label><input type="date" id="data-${doc.id}" value="${d.data_emissao||''}" oninput="atualizarValidade('${doc.id}')"></div>`:''}
+          <div class="campo"><label>Observações / protocolo</label><textarea id="obs-${doc.id}">${d.obs||''}</textarea></div>
+        </div>
+        ${doc.val90?`<div class="validade-alerta" id="val-${doc.id}"></div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  DOCS.forEach(doc => { if (doc.val90) atualizarValidade(doc.id); });
+}
+function labelStatus(s) { return s==='pronto'?'✅ Pronto':s==='atencao'?'⚠️ Atenção':'⏳ Pendente'; }
+function toggleStatus(id) {
+  const ciclo = ['pendente','pronto','atencao'];
+  if (!dados[id]) dados[id] = {status:'pendente',data_emissao:'',obs:''};
+  dados[id].status = ciclo[(ciclo.indexOf(dados[id].status)+1)%ciclo.length];
+  const btn = document.getElementById('btn-'+id);
+  btn.className = 'status-btn s-'+dados[id].status;
+  btn.textContent = labelStatus(dados[id].status);
+  atualizarResumo();
+}
+function atualizarValidade(id) {
+  const input = document.getElementById('data-'+id);
+  const el = document.getElementById('val-'+id);
+  if (!input||!el) return;
+  if (!input.value) { el.textContent=''; el.className='validade-alerta'; return; }
+  const dias = Math.floor((new Date()-new Date(input.value))/86400000);
+  if (dias>90) { el.textContent='❌ Certidão vencida! Emitida há '+dias+' dias (limite: 90)'; el.className='validade-alerta val-venc'; }
+  else if (dias>60) { el.textContent='⚠️ Atenção: emitida há '+dias+' dias. Verifique a data de entrega.'; el.className='validade-alerta val-warn'; }
+  else { el.textContent='✅ Válida: emitida há '+dias+' dias'; el.className='validade-alerta val-ok'; }
+  if (dados[id]) dados[id].data_emissao = input.value;
+}
+function atualizarResumo() {
+  let p=0,pe=0,a=0;
+  DOCS.forEach(doc => { const s=(dados[doc.id]||{}).status||'pendente'; if(s==='pronto')p++; else if(s==='atencao')a++; else pe++; });
+  document.getElementById('cnt-pronto').textContent=p;
+  document.getElementById('cnt-pendente').textContent=pe;
+  document.getElementById('cnt-atencao').textContent=a;
+  document.getElementById('cnt-total').textContent=DOCS.length;
+}
+async function salvar() {
+  DOCS.forEach(doc => {
+    if (!dados[doc.id]) dados[doc.id]={status:'pendente',data_emissao:'',obs:''};
+    const o=document.getElementById('obs-'+doc.id); if(o) dados[doc.id].obs=o.value;
+    const d=document.getElementById('data-'+doc.id); if(d) dados[doc.id].data_emissao=d.value;
+  });
+  await fetch('/api/pregressa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});
+  const btn=document.querySelector('.btn-salvar'); btn.textContent='✅ Salvo!';
+  setTimeout(()=>btn.textContent='💾 Salvar progresso',2000);
+}
+carregar();
+</script>
+</body>
+</html>
+""".replace("__NAV__", _nav("v"))
 
 HTML_TITULOS = """<!DOCTYPE html>
 <html lang="pt-BR">
@@ -1188,6 +1347,12 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(HTML_RANKING.encode("utf-8"))
 
+        elif self.path == "/pregressa":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(HTML_PREGRESSA.encode("utf-8"))
+
         elif self.path == "/titulos":
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -1199,6 +1364,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(HTML_CRONOGRAMA.encode("utf-8"))
+
+        elif self.path == "/api/pregressa":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(estado["pregressa"]).encode("utf-8"))
 
         elif self.path == "/api/estado":
             self.send_response(200)
@@ -1239,7 +1410,12 @@ class Handler(BaseHTTPRequestHandler):
             self._redirecionar_login()
             return
 
-        if self.path == "/api/iniciar":
+        if self.path == "/api/pregressa":
+            length = int(self.headers.get("Content-Length", 0))
+            estado["pregressa"] = json.loads(self.rfile.read(length))
+            self._ok()
+
+        elif self.path == "/api/iniciar":
             if not estado["monitorando"]:
                 estado["monitorando"] = True
                 estado["status"] = "ativo"
