@@ -28,7 +28,7 @@ EMAIL_SENHA_APP = "vmkx hziv chuo ktjo"   # Senha de app do Gmail (não a senha 
 TELEGRAM_TOKEN = "8826569151:AAHA0xAkp10HXKBApPc6Cdp7lU7qP4qaa24"
 TELEGRAM_CHAT_ID = "917318112"
 
-PORTA_SERVIDOR = 5000
+PORTA_SERVIDOR = int(os.environ.get("PORT", 5000))
 
 SENHA = "kleberanny"
 SESSIONS = set()  # tokens de sessão ativos
@@ -954,5 +954,5 @@ if __name__ == "__main__":
         print(f"⚠️  Email não configurado. Edite EMAIL_REMETENTE e EMAIL_SENHA_APP no arquivo.")
     print(f"Pressione Ctrl+C para parar\n")
 
-    server = HTTPServer(("localhost", PORTA_SERVIDOR), Handler)
+    server = HTTPServer(("0.0.0.0", PORTA_SERVIDOR), Handler)
     server.serve_forever()
