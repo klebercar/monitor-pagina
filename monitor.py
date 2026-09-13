@@ -352,6 +352,7 @@ HTML_RANKING = """<!DOCTYPE html>
   .nav { background: #1e293b; border-bottom: 1px solid #334155; display: flex; gap: 0; }
   .nav a { padding: 12px 24px; font-size: 13px; font-weight: 600; color: #94a3b8; text-decoration: none; border-bottom: 2px solid transparent; }
   .nav a.ativo { color: #e2e8f0; border-bottom-color: #3b82f6; }
+  .nav { align-items: center; }
   .container { max-width: 900px; margin: 32px auto; padding: 0 20px; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
   .card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; }
@@ -394,6 +395,7 @@ HTML_RANKING = """<!DOCTYPE html>
 <nav class="nav">
   <a href="/">🔍 Página FCC</a>
   <a href="/ranking" class="ativo">📊 Meu Ranking</a>
+  <button onclick="iniciarTudo()" style="margin-left:12px;padding:6px 16px;border-radius:8px;border:none;background:#10b981;color:white;font-size:13px;font-weight:600;cursor:pointer;">▶▶ Iniciar Tudo</button>
 </nav>
 <div class="container">
   <div class="alerta" id="alerta">📊 <strong>Ranking atualizado!</strong> Sua posição mudou.</div>
@@ -447,6 +449,11 @@ HTML_RANKING = """<!DOCTYPE html>
 <script>
 let ultimaMudanca = null;
 let proximaVerificacao = null;
+
+async function iniciarTudo() {
+  await fetch('/api/iniciar-tudo', { method: 'POST' });
+  atualizar();
+}
 
 async function iniciarRanking() { await fetch('/api/ranking/iniciar', { method: 'POST' }); atualizar(); }
 async function pararRanking() { await fetch('/api/ranking/parar', { method: 'POST' }); atualizar(); }
@@ -602,9 +609,10 @@ HTML_PAGINA = """<!DOCTYPE html>
   <span>🔍</span>
   <h1>Monitor de Página — FCC Concursos</h1>
 </div>
-<nav style="background:#1e293b;border-bottom:1px solid #334155;display:flex;">
+<nav style="background:#1e293b;border-bottom:1px solid #334155;display:flex;align-items:center;">
   <a href="/" style="padding:12px 24px;font-size:13px;font-weight:600;color:#e2e8f0;text-decoration:none;border-bottom:2px solid #3b82f6;">🔍 Página FCC</a>
   <a href="/ranking" style="padding:12px 24px;font-size:13px;font-weight:600;color:#94a3b8;text-decoration:none;border-bottom:2px solid transparent;">📊 Meu Ranking</a>
+  <button onclick="iniciarTudo()" style="margin-left:12px;padding:6px 16px;border-radius:8px;border:none;background:#10b981;color:white;font-size:13px;font-weight:600;cursor:pointer;">▶▶ Iniciar Tudo</button>
 </nav>
 <div class="container">
   <div class="alerta" id="alerta">⚡ <strong>Mudança detectada!</strong> A página foi atualizada.</div>
@@ -762,6 +770,11 @@ setInterval(() => {
   }
 }, 1000);
 
+async function iniciarTudo() {
+  await fetch('/api/iniciar-tudo', { method: 'POST' });
+  atualizar();
+}
+
 async function limparHistorico() {
   await fetch('/api/limpar-historico', { method: 'POST' });
   atualizar();
@@ -914,6 +927,16 @@ class Handler(BaseHTTPRequestHandler):
                     est["historico"].insert(0, {"hora": agora, "tipo": "ok", "msg": "Verificação manual"})
                 est["historico"] = est["historico"][:50]
             threading.Thread(target=_verificar, daemon=True).start()
+            self._ok()
+
+        elif self.path == "/api/iniciar-tudo":
+            if not estado["monitorando"]:
+                estado["monitorando"] = True
+                estado["status"] = "ativo"
+                threading.Thread(target=loop_monitoramento, daemon=True).start()
+            if not estado["ranking"]["monitorando"]:
+                estado["ranking"]["monitorando"] = True
+                threading.Thread(target=loop_ranking, daemon=True).start()
             self._ok()
 
         elif self.path == "/api/ranking/limpar-historico":
