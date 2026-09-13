@@ -15,7 +15,9 @@ import secrets
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+TZ_BRASILIA = timezone(timedelta(hours=-3))
 
 # ==================== CONFIGURAÇÕES ====================
 URL_MONITORADA = "https://www.concursosfcc.com.br/concursos/sface125/index.html"
@@ -159,7 +161,7 @@ def loop_ranking():
     print(f"[RANKING] Iniciando monitoramento da planilha")
     while est["monitorando"]:
         est["heartbeat"] = time.time()
-        agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        agora = datetime.now(TZ_BRASILIA).strftime("%d/%m/%Y %H:%M:%S")
         dados, erro = obter_dados_ranking()
         est["ultima_verificacao"] = agora
 
@@ -255,7 +257,7 @@ def loop_monitoramento():
     print(f"[MONITOR] Iniciando monitoramento de: {estado['url']}")
     while estado["monitorando"]:
         estado["heartbeat"] = time.time()
-        agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        agora = datetime.now(TZ_BRASILIA).strftime("%d/%m/%Y %H:%M:%S")
         hash_atual, info = obter_hash_pagina(estado["url"])
         estado["ultima_verificacao"] = agora
 
@@ -884,7 +886,7 @@ class Handler(BaseHTTPRequestHandler):
 
         elif self.path == "/api/verificar":
             def verificar_agora():
-                agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                agora = datetime.now(TZ_BRASILIA).strftime("%d/%m/%Y %H:%M:%S")
                 hash_atual, info = obter_hash_pagina(estado["url"])
                 estado["ultima_verificacao"] = agora
                 if hash_atual is None:
@@ -917,7 +919,7 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/ranking/verificar":
             def _verificar():
                 est = estado["ranking"]
-                agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                agora = datetime.now(TZ_BRASILIA).strftime("%d/%m/%Y %H:%M:%S")
                 dados, erro = obter_dados_ranking()
                 est["ultima_verificacao"] = agora
                 est["dados"] = dados
