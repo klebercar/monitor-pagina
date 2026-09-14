@@ -234,7 +234,7 @@ def loop_ranking():
                 msg = " | ".join(mudancas)
                 est["historico"].insert(0, {"hora": agora, "tipo": "mudanca", "msg": msg})
                 texto = f"📊 Ranking Atualizado!\n{PLANILHA_NOME}\n" + "\n".join(mudancas) + f"\nDetectado em: {agora}"
-                enviar_telegram(texto)
+                enviar_telegram(texto, com_botao=True)
                 enviar_email("📊 Ranking FCC Atualizado!", f"<h2>Ranking Atualizado!</h2><pre>{texto}</pre>")
             else:
                 est["historico"].insert(0, {"hora": agora, "tipo": "ok", "msg": "Sem mudanças no ranking"})
@@ -250,9 +250,12 @@ def loop_ranking():
         est["proxima_em"] = 0
 
 
-def enviar_telegram(mensagem):
+def enviar_telegram(mensagem, com_botao=False):
     try:
-        dados = urllib.parse.urlencode({"chat_id": TELEGRAM_CHAT_ID, "text": mensagem}).encode()
+        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensagem}
+        if com_botao:
+            payload["reply_markup"] = json.dumps({"inline_keyboard": [[{"text": "⏳ No aguardo...", "callback_data": "no_aguardo"}]]})
+        dados = urllib.parse.urlencode(payload).encode()
         req = urllib.request.Request(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data=dados)
         urllib.request.urlopen(req, timeout=10)
         print("[TELEGRAM] Mensagem enviada!")
@@ -260,6 +263,35 @@ def enviar_telegram(mensagem):
     except Exception as e:
         print(f"[TELEGRAM] Erro: {e}")
         return False
+
+
+def loop_telegram_polling():
+    offset = None
+    while True:
+        try:
+            params = {"timeout": 30, "allowed_updates": "callback_query"}
+            if offset:
+                params["offset"] = offset
+            url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates?" + urllib.parse.urlencode(params)
+            with urllib.request.urlopen(url, timeout=35) as resp:
+                data = json.loads(resp.read())
+            for update in data.get("result", []):
+                offset = update["update_id"] + 1
+                cb = update.get("callback_query")
+                if cb and cb.get("data") == "no_aguardo":
+                    cb_id = cb["id"]
+                    # Responde o callback (remove o "carregando" do botão)
+                    urllib.request.urlopen(
+                        urllib.request.Request(
+                            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/answerCallbackQuery",
+                            data=urllib.parse.urlencode({"callback_query_id": cb_id}).encode()
+                        ), timeout=10
+                    )
+                    # Envia a mensagem de resposta
+                    enviar_telegram("⏳ No aguardo...")
+        except Exception as e:
+            print(f"[POLLING] Erro: {e}")
+            time.sleep(5)
 
 
 def enviar_email(assunto, corpo):
@@ -310,7 +342,7 @@ def loop_monitoramento():
             estado["total_mudancas"] += 1
             estado["historico"].insert(0, {"hora": agora, "tipo": "mudanca", "msg": "Página atualizada!"})
             texto = f"⚡ Página do Concurso FCC Atualizada!\nDetectado em: {agora}\nTotal de mudanças: {estado['total_mudancas']}\n{estado['url']}"
-            enviar_telegram(texto)
+            enviar_telegram(texto, com_botao=True)
             enviar_email("⚡ Página do Concurso FCC Atualizada!", f"<h2>Página Atualizada!</h2><pre>{texto}</pre>")
         else:
             estado["historico"].insert(0, {"hora": agora, "tipo": "ok", "msg": "Sem mudanças"})
@@ -1550,4 +1582,5 @@ if __name__ == "__main__":
     print(f"Pressione Ctrl+C para parar\n")
     server = HTTPServer(("0.0.0.0", PORTA_SERVIDOR), Handler)
     threading.Thread(target=loop_autoping, daemon=True).start()
+    threading.Thread(target=loop_telegram_polling, daemon=True).start()
     server.serve_forever()
