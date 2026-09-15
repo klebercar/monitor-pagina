@@ -167,6 +167,13 @@ def obter_dados_ranking():
                     pass
         ameacas.sort(key=lambda x: -x["obj_disc"])
 
+        # Snapshot de títulos de todos os candidatos para detectar quem mudou
+        titulos_snapshot = {}
+        for i, linha in enumerate(reader[5:], start=1):
+            if len(linha) > 9 and linha[0] and linha[9]:
+                tit = linha[8].strip() if len(linha) > 8 else ""
+                titulos_snapshot[linha[0]] = {"nome": linha[1] if len(linha) > 1 else "", "titulacao": tit, "pos": i}
+
         return {
             "inscricao": meu_dado[0],
             "nome": meu_dado[1],
@@ -188,6 +195,7 @@ def obter_dados_ranking():
             "media_titulos_usar": str(media_titulos_usar).replace(".", ","),
             "pos_projetada": str(pos_projetada),
             "ameacas": ameacas,
+            "titulos_snapshot": titulos_snapshot,
         }, None
     except Exception as e:
         return None, str(e)
@@ -215,10 +223,24 @@ def loop_ranking():
                 mudancas.append(f"Posição Recalculada: {ant['pos_recalculada']}º → {dados['pos_recalculada']}º")
             if dados["pos_projetada"] != ant["pos_projetada"]:
                 mudancas.append(f"Posição Projetada: {ant['pos_projetada']}º → {dados['pos_projetada']}º")
-            if dados["media_titulos"] != ant["media_titulos"]:
-                mudancas.append(f"Média Títulos: {ant['media_titulos']} → {dados['media_titulos']}")
-            if dados["com_titulos"] != ant["com_titulos"]:
-                mudancas.append(f"Títulos Preenchidos: {ant['com_titulos']} → {dados['com_titulos']}")
+            if dados["com_titulos"] != ant["com_titulos"] or dados["media_titulos"] != ant["media_titulos"]:
+                snap_ant = ant.get("titulos_snapshot", {})
+                snap_novo = dados.get("titulos_snapshot", {})
+                novos = []
+                for insc, info in snap_novo.items():
+                    tit_novo = info["titulacao"]
+                    tit_ant = snap_ant.get(insc, {}).get("titulacao", "")
+                    sem_ant = not tit_ant or tit_ant in ("0,00", "0.00", "-", "")
+                    sem_novo = not tit_novo or tit_novo in ("0,00", "0.00", "-", "")
+                    if sem_ant and not sem_novo:
+                        novos.append(f"  • {info['nome']} (pos {info['pos']}): {tit_novo} pts")
+                if dados["com_titulos"] != ant["com_titulos"]:
+                    linha = f"Títulos Preenchidos: {ant['com_titulos']} → {dados['com_titulos']}"
+                    if novos:
+                        linha += "\n" + "\n".join(novos)
+                    mudancas.append(linha)
+                if dados["media_titulos"] != ant["media_titulos"]:
+                    mudancas.append(f"Média Títulos: {ant['media_titulos']} → {dados['media_titulos']}")
             if dados["class_liq_geral"] != ant["class_liq_geral"]:
                 mudancas.append(f"Class. Líquida Geral: {ant['class_liq_geral']} → {dados['class_liq_geral']}")
             if dados["situacao"] != ant["situacao"]:
