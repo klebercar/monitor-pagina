@@ -167,7 +167,7 @@ def obter_dados_ranking():
                     pass
         ameacas.sort(key=lambda x: -x["obj_disc"])
 
-        # Listas ordenadas com/sem título
+        # Listas ordenadas
         lista_com_titulo = []
         lista_sem_titulo = []
         for linha in reader[5:]:
@@ -176,15 +176,14 @@ def obter_dados_ranking():
                     tit = linha[8].strip() if len(linha) > 8 else ""
                     sem_titulo = not tit or tit in ("0,00", "0.00", "-", "")
                     obj_disc = float(linha[6].replace(",", ".")) + float(linha[7].replace(",", "."))
-                    total = float(linha[9].replace(",", "."))
-                    entry = {"nome": linha[1] if len(linha) > 1 else "", "titulacao": tit if not sem_titulo else "", "obj_disc": round(obj_disc, 2), "total": linha[9]}
-                    if sem_titulo:
-                        lista_sem_titulo.append(entry)
-                    else:
-                        lista_com_titulo.append(entry)
+                    tit_val = 0.0 if sem_titulo else float(tit.replace(",", "."))
+                    total_real = obj_disc + tit_val
+                    entry = {"nome": linha[1] if len(linha) > 1 else "", "titulacao": tit if not sem_titulo else "", "obj_disc": round(obj_disc, 2), "total": linha[9], "total_real": total_real}
+                    lista_com_titulo.append(entry)
+                    lista_sem_titulo.append(entry)
                 except:
                     pass
-        lista_com_titulo.sort(key=lambda x: -float(x["total"].replace(",", ".")))
+        lista_com_titulo.sort(key=lambda x: -x["total_real"])
         lista_sem_titulo.sort(key=lambda x: -x["obj_disc"])
 
         # Snapshot de títulos de todos os candidatos para detectar quem mudou
@@ -1101,8 +1100,8 @@ __NAV__
     <h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       📋 Lista Completa
       <span style="display:flex;gap:6px">
-        <button id="tab-com" onclick="mostrarLista('com')" style="padding:4px 14px;border-radius:20px;border:none;background:#10b981;color:white;font-size:11px;font-weight:700;cursor:pointer">Com Título</button>
-        <button id="tab-sem" onclick="mostrarLista('sem')" style="padding:4px 14px;border-radius:20px;border:none;background:#334155;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Sem Título</button>
+        <button id="tab-com" onclick="mostrarLista('com')" style="padding:4px 14px;border-radius:20px;border:none;background:#10b981;color:white;font-size:11px;font-weight:700;cursor:pointer">Obj+Disc+Título</button>
+        <button id="tab-sem" onclick="mostrarLista('sem')" style="padding:4px 14px;border-radius:20px;border:none;background:#334155;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Obj+Disc</button>
       </span>
       <span id="lista-count" style="font-size:11px;color:#64748b;font-weight:400"></span>
     </h2>
@@ -1142,10 +1141,10 @@ function mostrarLista(aba) {
   document.getElementById('lista-count').textContent = lista.length + ' candidatos';
   const meuNome = '__NOME__';
   if (!lista.length) { document.getElementById('lista-container').innerHTML = '<div style="color:#64748b;padding:8px 0">Nenhum candidato.</div>'; return; }
-  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:#64748b;font-size:11px;text-transform:uppercase;position:sticky;top:0;background:#1e293b"><th style="text-align:left;padding:7px 4px">#</th><th style="text-align:left;padding:7px 4px">Nome</th>' + (aba==='com' ? '<th style="text-align:right;padding:7px 4px">T\u00edtulo</th>' : '') + '<th style="text-align:right;padding:7px 4px">Obj+Disc</th><th style="text-align:right;padding:7px 4px">Total</th></tr>';
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:#64748b;font-size:11px;text-transform:uppercase;position:sticky;top:0;background:#1e293b"><th style="text-align:left;padding:7px 4px">#</th><th style="text-align:left;padding:7px 4px">Nome</th>' + (aba==='com' ? '<th style="text-align:right;padding:7px 4px">T\u00edtulo</th><th style="text-align:right;padding:7px 4px">Total</th>' : '<th style="text-align:right;padding:7px 4px">Obj+Disc</th>') + '</tr>';
   lista.forEach((c, i) => {
     const eu = c.nome === meuNome;
-    html += '<tr style="border-top:1px solid #334155;' + (eu ? 'background:#1e3a5f' : '') + '"><td style="padding:6px 4px;color:#64748b">' + (i+1) + '</td><td style="padding:6px 4px;' + (eu ? 'color:#93c5fd;font-weight:700' : '') + '">' + c.nome + (eu ? ' \u2b50' : '') + '</td>' + (aba==='com' ? '<td style="text-align:right;padding:6px 4px;color:#10b981">' + c.titulacao + '</td>' : '') + '<td style="text-align:right;padding:6px 4px;color:#f59e0b">' + c.obj_disc + '</td><td style="text-align:right;padding:6px 4px;font-weight:600">' + c.total + '</td></tr>';
+    html += '<tr style="border-top:1px solid #334155;' + (eu ? 'background:#1e3a5f' : '') + '"><td style="padding:6px 4px;color:#64748b">' + (i+1) + '</td><td style="padding:6px 4px;' + (eu ? 'color:#93c5fd;font-weight:700' : '') + '">' + c.nome + (eu ? ' \u2b50' : '') + '</td>' + (aba==='com' ? '<td style="text-align:right;padding:6px 4px;color:#10b981">' + c.titulacao + '</td><td style="text-align:right;padding:6px 4px;font-weight:600">' + c.total + '</td>' : '<td style="text-align:right;padding:6px 4px;color:#f59e0b">' + c.obj_disc + '</td>') + '</tr>';
   });
   document.getElementById('lista-container').innerHTML = html + '</table>';
 }
