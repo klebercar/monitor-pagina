@@ -167,6 +167,26 @@ def obter_dados_ranking():
                     pass
         ameacas.sort(key=lambda x: -x["obj_disc"])
 
+        # Listas ordenadas com/sem título
+        lista_com_titulo = []
+        lista_sem_titulo = []
+        for linha in reader[5:]:
+            if len(linha) > 9 and linha[0] and linha[9]:
+                try:
+                    tit = linha[8].strip() if len(linha) > 8 else ""
+                    sem_titulo = not tit or tit in ("0,00", "0.00", "-", "")
+                    obj_disc = float(linha[6].replace(",", ".")) + float(linha[7].replace(",", "."))
+                    total = float(linha[9].replace(",", "."))
+                    entry = {"nome": linha[1] if len(linha) > 1 else "", "titulacao": tit if not sem_titulo else "", "obj_disc": round(obj_disc, 2), "total": linha[9]}
+                    if sem_titulo:
+                        lista_sem_titulo.append(entry)
+                    else:
+                        lista_com_titulo.append(entry)
+                except:
+                    pass
+        lista_com_titulo.sort(key=lambda x: -float(x["total"].replace(",", ".")))
+        lista_sem_titulo.sort(key=lambda x: -x["obj_disc"])
+
         # Snapshot de títulos de todos os candidatos para detectar quem mudou
         titulos_snapshot = {}
         for i, linha in enumerate(reader[5:], start=1):
@@ -195,6 +215,8 @@ def obter_dados_ranking():
             "media_titulos_usar": str(media_titulos_usar).replace(".", ","),
             "pos_projetada": str(pos_projetada),
             "ameacas": ameacas,
+            "lista_com_titulo": lista_com_titulo,
+            "lista_sem_titulo": lista_sem_titulo,
             "titulos_snapshot": titulos_snapshot,
         }, None
     except Exception as e:
@@ -1075,6 +1097,17 @@ __NAV__
     <h2>⚠️ Ameaças — Sem título, total entre 276,10 e 287,10 (até 11pts abaixo de você)</h2>
     <div id="ameacas-lista"></div>
   </div>
+  <div class="painel" id="painel-lista">
+    <h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      📋 Lista Completa
+      <span style="display:flex;gap:6px">
+        <button id="tab-com" onclick="mostrarLista('com')" style="padding:4px 14px;border-radius:20px;border:none;background:#10b981;color:white;font-size:11px;font-weight:700;cursor:pointer">Com Título</button>
+        <button id="tab-sem" onclick="mostrarLista('sem')" style="padding:4px 14px;border-radius:20px;border:none;background:#334155;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Sem Título</button>
+      </span>
+      <span id="lista-count" style="font-size:11px;color:#64748b;font-weight:400"></span>
+    </h2>
+    <div id="lista-container" style="max-height:400px;overflow-y:auto"></div>
+  </div>
   <div class="controles">
     <button class="btn btn-verde" onclick="iniciarRanking()">▶ Iniciar</button>
     <button class="btn btn-vermelho" onclick="pararRanking()">⏹ Parar</button>
@@ -1100,6 +1133,22 @@ async function resetarMedia() {
   setTimeout(atualizar, 2000);
 }
 async function iniciarRanking() { await fetch('/api/ranking/iniciar', { method: 'POST' }); atualizar(); }
+let _listaAtiva = 'com', _dadosLista = {};
+function mostrarLista(aba) {
+  _listaAtiva = aba;
+  document.getElementById('tab-com').style.cssText = 'padding:4px 14px;border-radius:20px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:' + (aba==='com' ? '#10b981' : '#334155') + ';color:' + (aba==='com' ? 'white' : '#94a3b8');
+  document.getElementById('tab-sem').style.cssText = 'padding:4px 14px;border-radius:20px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:' + (aba==='sem' ? '#a855f7' : '#334155') + ';color:' + (aba==='sem' ? 'white' : '#94a3b8');
+  const lista = aba==='com' ? (_dadosLista.lista_com_titulo||[]) : (_dadosLista.lista_sem_titulo||[]);
+  document.getElementById('lista-count').textContent = lista.length + ' candidatos';
+  const meuNome = '__NOME__';
+  if (!lista.length) { document.getElementById('lista-container').innerHTML = '<div style="color:#64748b;padding:8px 0">Nenhum candidato.</div>'; return; }
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="color:#64748b;font-size:11px;text-transform:uppercase;position:sticky;top:0;background:#1e293b"><th style="text-align:left;padding:7px 4px">#</th><th style="text-align:left;padding:7px 4px">Nome</th>' + (aba==='com' ? '<th style="text-align:right;padding:7px 4px">T\u00edtulo</th>' : '') + '<th style="text-align:right;padding:7px 4px">Obj+Disc</th><th style="text-align:right;padding:7px 4px">Total</th></tr>';
+  lista.forEach((c, i) => {
+    const eu = c.nome === meuNome;
+    html += '<tr style="border-top:1px solid #334155;' + (eu ? 'background:#1e3a5f' : '') + '"><td style="padding:6px 4px;color:#64748b">' + (i+1) + '</td><td style="padding:6px 4px;' + (eu ? 'color:#93c5fd;font-weight:700' : '') + '">' + c.nome + (eu ? ' \u2b50' : '') + '</td>' + (aba==='com' ? '<td style="text-align:right;padding:6px 4px;color:#10b981">' + c.titulacao + '</td>' : '') + '<td style="text-align:right;padding:6px 4px;color:#f59e0b">' + c.obj_disc + '</td><td style="text-align:right;padding:6px 4px;font-weight:600">' + c.total + '</td></tr>';
+  });
+  document.getElementById('lista-container').innerHTML = html + '</table>';
+}
 async function pararRanking() { await fetch('/api/ranking/parar', { method: 'POST' }); atualizar(); }
 async function verificarRanking() { await fetch('/api/ranking/verificar', { method: 'POST' }); setTimeout(atualizar, 3000); }
 async function limparHistoricoRanking() { await fetch('/api/ranking/limpar-historico', { method: 'POST' }); atualizar(); }
@@ -1154,7 +1203,9 @@ async function atualizar() {
     document.getElementById('d-tit').textContent = d.dados.titulacao;
     document.getElementById('d-assumir').textContent = d.dados.vai_assumir;
     document.getElementById('d-eleg').textContent = d.dados.elegivel;
-    document.getElementById('d-prox-geral').innerHTML = d.dados.proximo_geral ? `<span class="destaque">${d.dados.proximo_geral}</span>` : '—';
+    document.getElementById('d-prox-geral').innerHTML = d.dados.proximo_geral ? `<span class="destaque">${d.dados.proximo_geral}</span>` : '\u2014';
+    _dadosLista = d.dados;
+    mostrarLista(_listaAtiva);
   }
   document.getElementById('d-verif').textContent = d.ultima_verificacao || '—';
   document.getElementById('d-mudanca').textContent = d.ultima_mudanca || 'Nenhuma';
