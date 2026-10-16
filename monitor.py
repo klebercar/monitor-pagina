@@ -21,7 +21,7 @@ TZ_BRASILIA = timezone(timedelta(hours=-3))
 
 # ==================== CONFIGURAÇÕES ====================
 URL_MONITORADA = "https://www.concursosfcc.com.br/concursos/sface125/index.html"
-INTERVALO_SEGUNDOS = 60
+INTERVALO_SEGUNDOS = 1800  # 30 minutos
 
 EMAIL_DESTINO = "klebercar@gmail.com"
 EMAIL_REMETENTE = "klebercar@gmail.com"
