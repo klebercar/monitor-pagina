@@ -152,7 +152,7 @@ def obter_dados_ranking():
         pos_projetada = next((i + 1 for i, (_, insc) in enumerate(todos_proj) if PLANILHA_INSCRICAO in insc), "-")
 
         meu_total = float(meu_dado[9].replace(",", "."))
-        limite_inferior = meu_total - 11
+        limite_inferior = meu_total - 13
         ameacas = []
         for linha in reader[5:]:
             if len(linha) > 9 and linha[0] and linha[9] and PLANILHA_INSCRICAO not in linha[0]:
@@ -1059,7 +1059,7 @@ __NAV__
     <div class="card roxo"><div class="label">Posição Recalculada (c/ títulos)</div><div class="value" id="r-pos-recalc">—</div></div>
     <div class="card amarelo"><div class="label">Total de Pontos</div><div class="value" id="r-pontos">—</div></div>
     <div class="card azul"><div class="label">Títulos Preenchidos</div><div class="value" id="r-com-titulos">—</div></div>
-    <div class="card vermelho"><div class="label">Ameaças (sem título, ≤11pts)</div><div class="value" id="r-ameacas">—</div></div>
+    <div class="card vermelho"><div class="label">Ameaças (sem título, ≤13pts)</div><div class="value" id="r-ameacas">—</div></div>
     <div class="card" id="card-situacao"><div class="label">Situação</div><div class="value" style="font-size:14px" id="r-situacao">—</div></div>
     <div class="card" id="card-hb"><div class="label">Heartbeat</div><div class="value" style="font-size:13px" id="r-hb">—</div></div>
   </div>
@@ -1093,7 +1093,7 @@ __NAV__
     <div class="linha"><span class="chave">Última mudança</span><span class="valor" id="d-mudanca">—</span></div>
   </div>
   <div class="painel" id="painel-ameacas" style="display:none">
-    <h2>⚠️ Ameaças — Sem título, total entre 276,10 e 287,10 (até 11pts abaixo de você)</h2>
+    <h2>⚠️ Ameaças — Sem título, total entre 274,10 e 287,10 (até 13pts abaixo de você)</h2>
     <div id="ameacas-lista"></div>
   </div>
   <div class="painel" id="painel-lista">
